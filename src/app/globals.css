@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0c0b08; /* Warm dark brown/black */
+  --surface: #14120e; /* Warm dark surface */
+  --border: #22201b; /* Warm dark border */
+  --text: #eae8e3; /* Warm off-white */
+  --muted: #7a756c; /* Warm muted gray/brown */
+  
+  --mustard: #d1bc6a; /* The Mustard Oil Gold base accent */
+  --burgundy: #8e2d4e; /* Burgundy Wine secondary brand accent */
+  
+  --green: #00ff88; /* SAFE / CLEAN status */
+  --yellow: #f5c518; /* RISKY warning status */
+  --red: #ff3b3b; /* TRAP danger status */
+  
+  --accent: #d1bc6a;
+}
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  
+  --color-mustard: var(--mustard);
+  --color-burgundy: var(--burgundy);
+  
+  --color-green: var(--green);
+  --color-yellow: var(--yellow);
+  --color-red: var(--red);
+  
+  --color-accent: var(--accent);
+  
+  --font-mono: var(--font-ibm-plex-mono);
+  --font-sans: var(--font-ibm-plex-sans);
+  --radius-none: 0px;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

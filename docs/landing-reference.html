@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTL Radar — Token Security Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #111111;
+      --border:    #1e1e1e;
+      --border-hi: #2a2a2a;
+      --text:      #e8e8e8;
+      --muted:     #666666;
+      --dim:       #333333;
+      --green:     #00ff88;
+      --yellow:    #f5c518;
+      --red:       #ff3b3b;
+      --accent:    #ffffff;
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'IBM Plex Sans', sans-serif;
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 300;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-logo .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--bg) !important;
+      background: var(--accent);
+      padding: 0.45rem 1rem;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* HERO */
+    .hero {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 6rem 2rem 4rem;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 1px;
+      background: var(--dim);
+    }
+
+    .hero h1 {
+      font-family: var(--mono);
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--green);
+    }
+
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin-bottom: 2.5rem;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 0.75rem 1.5rem;
+      text-decoration: none;
+      transition: opacity 0.15s;
+      display: inline-block;
+    }
+
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-ghost {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: color 0.15s;
+    }
+
+    .btn-ghost:hover { color: var(--text); }
+
+    /* STATS STRIP */
+    .stats-strip {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin: 4rem 0 0;
+    }
+
+    .stat {
+      padding: 1.75rem 2rem;
+      border-right: 1px solid var(--border);
+    }
+
+    .stat:last-child { border-right: none; }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* RADAR DEMO */
+    .demo-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .radar-input-bar {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .radar-input-bar input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--text);
+      min-width: 0;
+    }
+
+    .radar-input-bar input::placeholder { color: var(--dim); }
+
+    .chain-toggle {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .chain-btn {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chain-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+
+    .scan-btn {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      padding: 0.5rem 1.25rem;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .scan-btn:hover { opacity: 0.85; }
+
+    /* THREE COLUMN RADAR */
+    .radar-columns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .radar-col {
+      background: var(--surface);
+      padding: 1.25rem;
+      min-height: 380px;
+      position: relative;
+    }
+
+    .col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .col-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .col-model {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+    }
+
+    .col-status {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.05em;
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--dim);
+    }
+
+    .status-dot.active { background: var(--green); animation: pulse 1.5s ease-in-out infinite; }
+    .status-dot.warning { background: var(--yellow); animation: pulse 1s ease-in-out infinite; }
+    .status-dot.alert { background: var(--red); animation: pulse 0.7s ease-in-out infinite; }
+
+    .tx-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .tx-item {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .tx-item.flagged {
+      color: var(--yellow);
+      border-color: rgba(245, 197, 24, 0.2);
+    }
+
+    .tx-item.safe { color: var(--green); }
+
+    .tx-hash { color: inherit; }
+    .tx-amount { color: inherit; opacity: 0.7; }
+    .tx-tag {
+      font-size: 0.55rem;
+      letter-spacing: 0.08em;
+      padding: 0.1rem 0.35rem;
+      border: 1px solid currentColor;
+      opacity: 0.6;
+    }
+
+    .agent-analysis {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .agent-analysis .line { margin-bottom: 0.3rem; }
+    .agent-analysis .highlight { color: var(--yellow); }
+
+    .verdict-box {
+      background: rgba(255, 59, 59, 0.06);
+      border: 1px solid rgba(255, 59, 59, 0.3);
+      padding: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .verdict-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .verdict-text {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .verdict-score {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 59, 59, 0.2);
+    }
+
+    .score-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    .score-value {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--red);
+    }
+
+    /* COST WIDGET */
+    .cost-widget {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      margin-top: 1px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .cost-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .cost-items {
+      display: flex;
+      gap: 2.5rem;
+      flex: 1;
+    }
+
+    .cost-item { display: flex; flex-direction: column; gap: 0.2rem; }
+
+    .cost-item-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--dim);
+      letter-spacing: 0.06em;
+    }
+
+    .cost-item-value {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .cost-item-value.benchmark { color: var(--muted); text-decoration: line-through; }
+    .cost-item-value.actual { color: var(--green); }
+    .cost-item-value.saved { color: var(--accent); }
+
+    /* HOW IT WORKS */
+    .how-section {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .how-section h2 {
+      font-family: var(--mono);
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .how-section .sub {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 3rem;
+      max-width: 480px;
+    }
+
+    .agent-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .agent-card {
+      background: var(--surface);
+      padding: 1.75rem;
+    }
+
+    .agent-num {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      color: var(--dim);
+      margin-bottom: 1rem;
+    }
+
+    .agent-name {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .agent-model-tag {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border: 1px solid var(--border-hi);
+      padding: 0.15rem 0.5rem;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+
+    .agent-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .agent-trigger {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--dim);
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* DISTRIBUTION */
+    .dist-section {
+      border-top: 1px solid var(--border);
+      padding: 5rem 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .dist-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      margin-top: 3rem;
+    }
+
+    .dist-card {
+      background: var(--surface);
+      padding: 1.75rem;
+    }
+
+    .dist-icon {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      border: 1px solid var(--border-hi);
+      padding: 0.2rem 0.5rem;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+
+    .dist-title {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .dist-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .dist-example {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--dim);
+      margin-top: 1rem;
+      padding: 0.6rem;
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    /* CTA */
+    .cta-section {
+      border-top: 1px solid var(--border);
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+
+    .cta-section h2 {
+      font-family: var(--mono);
+      font-size: clamp(1.6rem, 4vw, 2.8rem);
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .cta-section p {
+      color: var(--muted);
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-left {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+    }
+
+    .footer-right {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--dim);
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .footer-right a { color: var(--dim); text-decoration: none; transition: color 0.15s; }
+    .footer-right a:hover { color: var(--muted); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .stats-strip { grid-template-columns: repeat(2, 1fr); }
+      .radar-columns { grid-template-columns: 1fr; }
+      .agent-cards { grid-template-columns: 1fr; }
+      .dist-grid { grid-template-columns: 1fr; }
+      .cost-items { flex-wrap: wrap; gap: 1rem; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="/" class="nav-logo">
+      <span class="dot"></span>
+      BTL RADAR
+    </a>
+    <ul class="nav-links">
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#bots">Bots</a></li>
+      <li><a href="https://runtime.badtheorylabs.com" target="_blank">BTL Runtime</a></li>
+      <li><a href="/app" class="nav-cta">Launch Radar →</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <p class="hero-eyebrow">Powered by BTL Runtime · Multi-chain · EVM + Solana</p>
+    <h1>Three agents.<br />One gateway.<br /><em>Zero rugs.</em></h1>
+    <p class="hero-sub">BTL Radar watches any token in real time. Paste a contract address and three cascading AI agents — routed through the BTL gateway — screen every transaction, reason about anomalies, and fire a plain-English verdict before your wallet takes the hit.</p>
+    <div class="hero-actions">
+      <a href="/app" class="btn-primary">Launch Radar →</a>
+      <a href="https://t.me/BTLRadarBot" class="btn-ghost" target="_blank">→ Try on Telegram</a>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat">
+        <span class="stat-value">3</span>
+        <span class="stat-label">Cascading agents</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">2</span>
+        <span class="stat-label">Chains · EVM + SOL</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">~99%</span>
+        <span class="stat-label">Cost reduction via BTL</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">&lt;10s</span>
+        <span class="stat-label">Verdict time</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE DEMO SECTION -->
+  <section class="demo-section" id="demo">
+    <p class="section-label">Live radar demo</p>
+
+    <div class="radar-input-bar">
+      <input type="text" placeholder="Paste any contract address — EVM or Solana..." id="contractInput" />
+      <div class="chain-toggle">
+        <button class="chain-btn active" onclick="setChain('evm', this)">EVM</button>
+        <button class="chain-btn" onclick="setChain('sol', this)">SOL</button>
+      </div>
+      <button class="scan-btn" onclick="startScan()">Scan →</button>
+    </div>
+
+    <div class="radar-columns">
+      <!-- AGENT 1 -->
+      <div class="radar-col" id="col1">
+        <div class="col-header">
+          <div>
+            <div class="col-title">Agent 1 · Screener</div>
+            <div class="col-model">Llama 3 · via BTL</div>
+          </div>
+          <div class="col-status">
+            <span class="status-dot active" id="dot1"></span>
+            <span id="status1" style="font-family: var(--mono); font-size: 0.65rem; color: var(--muted);">LIVE</span>
+          </div>
+        </div>
+        <div class="tx-feed" id="txFeed">
+          <div class="tx-item safe">
+            <span class="tx-hash">0x4a2f...8c91</span>
+            <span class="tx-amount">0.42 ETH</span>
+            <span class="tx-tag">CLEAN</span>
+          </div>
+          <div class="tx-item safe">
+            <span class="tx-hash">0x9b1e...3d77</span>
+            <span class="tx-amount">1.2 ETH</span>
+            <span class="tx-tag">CLEAN</span>
+          </div>
+          <div class="tx-item safe">
+            <span class="tx-hash">0x2c8a...f142</span>
+            <span class="tx-amount">0.08 ETH</span>
+            <span class="tx-tag">CLEAN</span>
+          </div>
+          <div class="tx-item">
+            <span class="tx-hash">0x7f3b...a509</span>
+            <span class="tx-amount">0.31 ETH</span>
+            <span class="tx-tag">SCAN</span>
+          </div>
+          <div class="tx-item">
+            <span class="tx-hash">0x1d6c...8e24</span>
+            <span class="tx-amount">2.1 ETH</span>
+            <span class="tx-tag">SCAN</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENT 2 -->
+      <div class="radar-col" id="col2">
+        <div class="col-header">
+          <div>
+            <div class="col-title">Agent 2 · Forensic</div>
+            <div class="col-model">GPT-4o mini · via BTL</div>
+          </div>
+          <div class="col-status">
+            <span class="status-dot warning" id="dot2"></span>
+            <span id="status2" style="font-family: var(--mono); font-size: 0.65rem; color: var(--yellow);">ANALYZING</span>
+          </div>
+        </div>
+        <div class="agent-analysis">
+          <div class="line">→ Flagged tx: 0x7f3b...a509</div>
+          <div class="line">→ Wallet age: 3 days</div>
+          <div class="line highlight">→ Deployer match: YES</div>
+          <div class="line">→ Liquidity delta: -34%</div>
+          <div class="line highlight">→ Similar pattern: 4 prior rugs</div>
+          <div class="line">→ Dev wallet activity: HIGH</div>
+          <div class="line">→ Token approvals: UNLIMITED</div>
+          <div class="line highlight">→ Escalating to Agent 3...</div>
+        </div>
+      </div>
+
+      <!-- AGENT 3 -->
+      <div class="radar-col" id="col3">
+        <div class="col-header">
+          <div>
+            <div class="col-title">Agent 3 · Judge</div>
+            <div class="col-model">Claude Sonnet · via BTL</div>
+          </div>
+          <div class="col-status">
+            <span class="status-dot alert" id="dot3"></span>
+            <span id="status3" style="font-family: var(--mono); font-size: 0.65rem; color: var(--red);">ALERT</span>
+          </div>
+        </div>
+        <div class="verdict-box">
+          <div class="verdict-label">⚠ High Risk Detected</div>
+          <div class="verdict-text">Dev wallet controlling 41% of supply moved tokens to a 3-day-old address. Liquidity dropped 34% in the last 6 minutes. This wallet has been linked to 4 prior rug pulls on BSC. Do not buy. If holding, exit now.</div>
+          <div class="verdict-score">
+            <span class="score-label">RUG PROBABILITY</span>
+            <span class="score-value">91%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COST WIDGET -->
+    <div class="cost-widget">
+      <span class="cost-label">BTL Efficiency</span>
+      <div class="cost-items">
+        <div class="cost-item">
+          <span class="cost-item-label">GPT-4o for everything</span>
+          <span class="cost-item-value benchmark" id="benchmarkCost">$14.20</span>
+        </div>
+        <div class="cost-item">
+          <span class="cost-item-label">Actual via BTL router</span>
+          <span class="cost-item-value actual" id="actualCost">$0.11</span>
+        </div>
+        <div class="cost-item">
+          <span class="cost-item-label">Total saved</span>
+          <span class="cost-item-value saved" id="savedAmount">99.2%</span>
+        </div>
+        <div class="cost-item">
+          <span class="cost-item-label">Requests routed</span>
+          <span class="cost-item-value" style="color: var(--text);" id="requestCount">1,247</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section" id="how">
+    <p class="section-label">Architecture</p>
+    <h2>Three agents.<br />One gateway.</h2>
+    <p class="sub">BTL Runtime routes each agent to the cheapest model capable of its job. Agent 1 handles thousands of transactions cheaply. Agent 3 fires rarely — only when it actually matters.</p>
+
+    <div class="agent-cards">
+      <div class="agent-card">
+        <div class="agent-num">AGENT 01</div>
+        <div class="agent-name">High-Speed Screener</div>
+        <div class="agent-model-tag">Llama 3 · via BTL Runtime</div>
+        <div class="agent-desc">Processes 100% of incoming transactions in real time. Screens for volume spikes, dev wallet movement, gas anomalies, and liquidity shifts. Runs continuously at near-zero cost.</div>
+        <div class="agent-trigger">Triggers: always running · flags suspicious txs</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-num">AGENT 02</div>
+        <div class="agent-name">Forensic Analyst</div>
+        <div class="agent-model-tag">GPT-4o mini · via BTL Runtime</div>
+        <div class="agent-desc">Activates only when Agent 1 flags something. Inspects wallet history, deployer identity, liquidity patterns, and cross-references against known rug signatures.</div>
+        <div class="agent-trigger">Triggers: on Agent 1 flag · escalates if high risk</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-num">AGENT 03</div>
+        <div class="agent-name">Tactical Judge</div>
+        <div class="agent-model-tag">Claude Sonnet · via BTL Runtime</div>
+        <div class="agent-desc">Fires only when Agent 2 confirms high risk. Produces a plain-English verdict with rug probability score. Triggers alerts across web, Telegram, and X simultaneously.</div>
+        <div class="agent-trigger">Triggers: on Agent 2 escalation · fires alerts</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DISTRIBUTION -->
+  <section class="dist-section" id="bots">
+    <p class="section-label">Distribution</p>
+    <h2 style="font-family: var(--mono); font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 600; color: var(--accent); margin-bottom: 0.75rem;">Radar lives where crypto does.</h2>
+    <p style="color: var(--muted); font-size: 0.95rem; max-width: 480px;">Tag the bot wherever you're already talking about tokens. No new app to open.</p>
+
+    <div class="dist-grid">
+      <div class="dist-card">
+        <div class="dist-icon">WEB APP</div>
+        <div class="dist-title">Full Radar Dashboard</div>
+        <div class="dist-desc">Paste any contract address. Watch three agents cascade live. Full transaction feed, forensic breakdown, and real-time BTL cost metrics.</div>
+        <div class="dist-example">→ Supports EVM + Solana<br />→ No wallet connection required<br />→ Zero setup</div>
+      </div>
+      <div class="dist-card">
+        <div class="dist-icon">TELEGRAM</div>
+        <div class="dist-title">@BTLRadarBot</div>
+        <div class="dist-desc">Drop the contract address in any group or DM. Bot responds with a verdict in seconds. Your whole group sees it before anyone buys.</div>
+        <div class="dist-example">@BTLRadarBot 0x4f2a...<br />→ ⚠ HIGH RISK · 91% rug prob<br />→ Dev wallet moved 41% supply</div>
+      </div>
+      <div class="dist-card">
+        <div class="dist-icon">X / TWITTER</div>
+        <div class="dist-title">@BTLRadar</div>
+        <div class="dist-desc">Tag @BTLRadar with a contract address in any thread. Bot quote-tweets back with the verdict within seconds.</div>
+        <div class="dist-example">@BTLRadar check this CA<br />[contract address]<br />→ Quote tweet: SAFE · 4% risk</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Paste an address.<br />Know before you ape.</h2>
+    <p>Free to use. No wallet required. Powered by BTL Runtime.</p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <a href="/app" class="btn-primary">Launch Radar →</a>
+      <a href="https://t.me/BTLRadarBot" class="btn-ghost" target="_blank">→ Telegram Bot</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-left">BTL RADAR · Built on BTL Runtime · Bad Theory Labs Hackathon 2026</span>
+    <div class="footer-right">
+      <a href="https://runtime.badtheorylabs.com" target="_blank">BTL Runtime</a>
+      <a href="https://t.me/BTLRadarBot" target="_blank">Telegram</a>
+      <a href="https://x.com/BTLRadar" target="_blank">X / Twitter</a>
+    </div>
+  </footer>
+
+  <script>
+    let chain = 'evm';
+
+    function setChain(c, btn) {
+      chain = c;
+      document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function startScan() {
+      const input = document.getElementById('contractInput').value.trim();
+      if (!input) {
+        document.getElementById('contractInput').placeholder = 'Enter a contract address first...';
+        return;
+      }
+      window.location.href = `/app?address=${encodeURIComponent(input)}&chain=${chain}`;
+    }
+
+    document.getElementById('contractInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') startScan();
+    });
+
+    // Animate cost counter
+    let requests = 1247;
+    setInterval(() => {
+      requests += Math.floor(Math.random() * 3) + 1;
+      document.getElementById('requestCount').textContent = requests.toLocaleString();
+    }, 2000);
+  </script>
+</body>
+</html>
