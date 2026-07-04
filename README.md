@@ -101,7 +101,7 @@ Typical full cascade (screen → forensics → verdict): **~$0.014 benchmark vs 
 |---|---|---|
 | 🌐 Web app | [btl-radar.vercel.app](https://btl-radar.vercel.app) | Full three-column radar with live transaction feed and cost widget |
 | ✈️ Telegram | `@BTLRadarBot` | DM or add to any group — it scans every contract address posted ([`telegram-bot/`](telegram-bot/)) |
-| 𝕏 X | `@BTLRadar` | Mention it under any thread with a CA — replies with the verdict ([`x-bot/`](x-bot/)) |
+| 𝕏 X | `@BTLRadar` | Mention it under any thread with a CA — replies with the verdict ([`x-bot/`](x-bot/)). *Fully built; activation gated by X's Feb 2026 pay-per-use API pricing.* |
 
 Both bots are thin clients: they detect the address, call the same `/api/scan` pipeline, and
 format the verdict for their platform. One brain, three mouths.
