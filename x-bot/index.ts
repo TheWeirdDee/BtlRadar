@@ -16,6 +16,9 @@ const client = new TwitterApi({
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://btl-radar.vercel.app';
 
+// X bills per post read on pay-per-use; a slower poll directly saves credits.
+const POLL_MS = parseInt(process.env.POLL_INTERVAL_MS || '60000', 10);
+
 let lastCheckedId: string | undefined;
 
 async function checkMentions() {
@@ -54,11 +57,23 @@ async function checkMentions() {
       lastCheckedId = mentions.data.data[0].id;
     }
   } catch (err) {
-    console.error('Error checking mentions:', err);
+    const code = (err as { code?: number }).code;
+    if (code === 402) {
+      console.error(
+        '[402] X API credits depleted — top up in the X Developer Console (pay-per-use). ' +
+          'Mentions cannot be read until the balance is positive.'
+      );
+    } else if (code === 401 || code === 403) {
+      console.error(
+        `[${code}] X API auth/permission error — ensure the app has Read and Write access ` +
+          'and regenerate the access token/secret after changing it.'
+      );
+    } else {
+      console.error('Error checking mentions:', err);
+    }
   }
 }
 
-// Poll every 60 seconds (X free tier rate limit)
-console.log('BTL Radar X bot running...');
+console.log(`BTL Radar X bot running (polling every ${POLL_MS / 1000}s)...`);
 checkMentions();
-setInterval(checkMentions, 60000);
+setInterval(checkMentions, POLL_MS);
