@@ -10,6 +10,19 @@ import type { Chain, Transaction } from '@/lib/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+interface HeliusTokenTransfer {
+  mint?: string;
+  tokenAmount?: number;
+  fromUserAccount?: string;
+}
+
+interface HeliusTx {
+  signature: string;
+  timestamp?: number;
+  feePayer?: string;
+  tokenTransfers?: HeliusTokenTransfer[];
+}
+
 // Fetch the last 5 Solana token transfers using Helius parsed transactions API
 async function fetchSolanaHistory(address: string): Promise<Transaction[]> {
   try {
@@ -22,14 +35,14 @@ async function fetchSolanaHistory(address: string): Promise<Transaction[]> {
     const data = await res.json();
     if (!Array.isArray(data)) return [];
 
-    return data.map((tx: any) => {
+    return (data as HeliusTx[]).map((tx) => {
       const hash = tx.signature;
       const timestamp = tx.timestamp ? tx.timestamp * 1000 : Date.now();
       let amount = '0 tokens';
       let wallet = tx.feePayer || 'unknown';
 
       const transfer = tx.tokenTransfers?.find(
-        (t: any) => t.mint?.toLowerCase() === address.toLowerCase()
+        (t) => t.mint?.toLowerCase() === address.toLowerCase()
       );
       if (transfer) {
         amount = `${transfer.tokenAmount} tokens`;
@@ -67,10 +80,16 @@ async function fetchEVMHistory(address: string): Promise<Transaction[]> {
       }),
     });
 
+    interface AlchemyTransfer {
+      hash: string;
+      value?: number;
+      from?: string;
+    }
+
     const { result } = await response.json();
     if (!result?.transfers || !Array.isArray(result.transfers)) return [];
 
-    return result.transfers.map((tx: any) => ({
+    return (result.transfers as AlchemyTransfer[]).map((tx) => ({
       hash: tx.hash,
       amount: `${tx.value || 0} tokens`,
       wallet: tx.from || 'unknown',

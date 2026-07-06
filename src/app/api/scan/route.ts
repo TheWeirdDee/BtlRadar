@@ -251,7 +251,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve token identity
-    const normalizedAddress = contractAddress.toLowerCase();
     const tokenIdentity = KNOWN_TOKEN_IDENTITIES[normalizedAddress] || 'Unknown Token';
 
     // Use mock transactions if none provided (demo mode)
