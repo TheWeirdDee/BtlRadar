@@ -64,6 +64,7 @@ export interface ScanMemory {
 export async function saveScan(scan: ScanRecord): Promise<void> {
   const record: ScanRecord = {
     ...scan,
+    contract_address: scan.contract_address.toLowerCase(),
     scanned_at: scan.scanned_at || new Date().toISOString(),
   };
 

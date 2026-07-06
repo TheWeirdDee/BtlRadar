@@ -122,7 +122,10 @@ async function agent2Forensic(
     [
       {
         role: 'system',
-        content: `You are a forensic blockchain analyst specializing in rug pull detection. Given a flagged transaction and initial flags, perform deep analysis. Look for: deployer wallet connections, wallet age, prior rug history patterns, liquidity manipulation, honeypot mechanics, unlimited token approvals. Respond ONLY with valid JSON: {"escalate": true/false, "risk_level": "LOW/MEDIUM/HIGH/CRITICAL", "findings": ["finding1"], "wallet_risk": 0-100, "pattern_matches": ["pattern1"]}`
+        content: `You are a forensic blockchain analyst specializing in rug pull detection. Given a flagged transaction and initial flags, perform deep analysis. 
+First, recognize if the contract address is a highly established, reputable blue-chip DeFi protocol or native token (e.g. Aave AAVE, DAI, WBTC, WETH, etc.). If it is a verified safe blue-chip contract, note that the flagged activity is likely normal utility behavior or misattributed dust transactions, and do not make up fake rug pull findings or code vulnerabilities for it.
+Otherwise, perform a thorough pattern analysis of the flagged transaction: look for deployer wallet connections, wallet age, prior rug history patterns, liquidity manipulation, honeypot mechanics, and unlimited token approvals. 
+Respond ONLY with valid JSON: {"escalate": true/false, "risk_level": "LOW/MEDIUM/HIGH/CRITICAL", "findings": ["finding1"], "wallet_risk": 0-100, "pattern_matches": ["pattern1"]}`
       },
       {
         role: 'user',
@@ -368,7 +371,7 @@ async function persistScan(
   }
 ): Promise<void> {
   const record: ScanRecord = {
-    contract_address: contractAddress,
+    contract_address: contractAddress.toLowerCase(),
     chain,
     verdict: scanResult.verdict,
     risk_score: scanResult.risk_score,
