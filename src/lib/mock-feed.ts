@@ -53,16 +53,28 @@ export function startMockFeed(
   // at PLANTED_INDEX, which is pinned to fire at exactly PLANTED_DELAY_MS.
   // Later entries resume the normal cadence from that point so the feed stays in order.
   let nextDelay = 0;
+  const isBTL = targetAddress.toLowerCase() === BTL_DEMO_ADDRESS.toLowerCase();
+
   feed.forEach((entry, index) => {
     const delay = index === PLANTED_INDEX ? PLANTED_DELAY_MS : nextDelay;
     nextDelay = delay + TICK_MS;
 
     timers.push(
       setTimeout(() => {
+        let amount = normaliseAmount(entry.amount, targetAddress);
+        let wallet = entry.wallet;
+
+        if (!isBTL && index === PLANTED_INDEX) {
+          amount = "120 tokens";
+          wallet = useEVM 
+            ? "0x35761a6b326d50715735764e3972547a59634b61" 
+            : "6yUvT3nWzKqP8xRcMdJeLo4sYbHfGz1aXk9mNrQjT5oD";
+        }
+
         onTx({
           hash: useEVM ? toEVMHash(entry.hash, 64) : entry.hash,
-          amount: normaliseAmount(entry.amount, targetAddress),
-          wallet: useEVM ? toEVMHash(entry.wallet, 40) : entry.wallet,
+          amount,
+          wallet: useEVM ? toEVMHash(wallet, 40) : wallet,
           timestamp: Date.now(),
           chain,
         });
