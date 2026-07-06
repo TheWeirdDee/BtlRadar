@@ -177,7 +177,7 @@ export default function RadarDashboard() {
         const currentSeverity = verdict ? SEVERITY[verdict] : -1;
         const newSeverity = SEVERITY[data.verdict];
 
-        if (data.escalated_to_agent2 || newSeverity >= currentSeverity) {
+        if (data.escalated_to_agent2) {
           setForensicActive(true);
           setForensicFindings(data.flags);
         }

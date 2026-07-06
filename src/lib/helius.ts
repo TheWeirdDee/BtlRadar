@@ -52,39 +52,46 @@ function throttledFetchTransactionDetails(
 
 async function fetchTransactionDetails(
   signature: string,
-  mintAddress: string
+  mintAddress: string,
+  retries = 3
 ): Promise<{ amount: string; wallet: string }> {
-  try {
-    const response = await fetch(HELIUS_RPC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'getTransaction',
-        params: [signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }],
-      }),
-    });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(HELIUS_RPC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getTransaction',
+          params: [signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }],
+        }),
+      });
 
-    const { result }: { result: HeliusTransactionResult | null } = await response.json();
-    if (!result) return { amount: 'N/A', wallet: 'unknown' };
+      const { result }: { result: HeliusTransactionResult | null } = await response.json();
+      if (result) {
+        const firstKey = result.transaction?.message?.accountKeys?.[0];
+        const wallet = typeof firstKey === 'string' ? firstKey : firstKey?.pubkey ?? 'unknown';
 
-    const firstKey = result.transaction?.message?.accountKeys?.[0];
-    const wallet = typeof firstKey === 'string' ? firstKey : firstKey?.pubkey ?? 'unknown';
+        const pre = result.meta?.preTokenBalances?.find(b => b.mint === mintAddress);
+        const post = result.meta?.postTokenBalances?.find(b => b.mint === mintAddress);
 
-    const pre = result.meta?.preTokenBalances?.find(b => b.mint === mintAddress);
-    const post = result.meta?.postTokenBalances?.find(b => b.mint === mintAddress);
+        const preAmt = pre?.uiTokenAmount.uiAmount ?? 0;
+        const postAmt = post?.uiTokenAmount.uiAmount ?? 0;
 
-    if (pre && post) {
-      const delta = (post.uiTokenAmount.uiAmount ?? 0) - (pre.uiTokenAmount.uiAmount ?? 0);
-      return { amount: `${Math.abs(delta).toLocaleString()} tokens`, wallet };
+        if (pre || post) {
+          const delta = postAmt - preAmt;
+          return { amount: `${Math.abs(delta).toLocaleString()} tokens`, wallet };
+        }
+        return { amount: '0 tokens', wallet };
+      }
+    } catch (error) {
+      console.error(`Helius feed: getTransaction attempt ${attempt} failed`, error);
     }
-
-    return { amount: 'N/A', wallet };
-  } catch (error) {
-    console.error('Helius feed: failed to enrich transaction', error);
-    return { amount: 'N/A', wallet: 'unknown' };
+    // Wait before retrying (indexing delay)
+    await new Promise((resolve) => setTimeout(resolve, attempt * 500));
   }
+  return { amount: 'N/A', wallet: 'unknown' };
 }
 
 export function subscribeToSolanaTransactions(
