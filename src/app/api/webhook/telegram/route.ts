@@ -10,6 +10,7 @@ import { Telegraf } from 'telegraf';
 import { detectChain, scanContract, formatVerdict } from '../../../../../telegram-bot/lib';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60; // Allow bot requests to wait for complete BTL cascade scans without Vercel timing out
 
 // Initialize the bot instance locally in the API route context
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN || '');

@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callBTL, extractJSON } from '@/lib/btl';
 
+export const maxDuration = 60; // Allow up to 60 seconds execution limit on Vercel to prevent timeouts during cascades
+
 // deepseek-v4-flash and deepseek-v4-pro are deepseek-direct routes covered
 // by the hackathon's 10M DeepSeek token grant (x-btl-customer-charge: 0).
 // gpt-4o-mini routes through OpenRouter and bills the workspace balance.
