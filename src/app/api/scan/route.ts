@@ -216,6 +216,7 @@ export async function POST(request: NextRequest) {
         summary: knownSafe.summary,
         action: 'No immediate action required.',
         key_evidence: [] as string[],
+        suspicious_hashes: [] as string[],
         agent1_cost: 0,
         agent2_cost: null,
         agent3_cost: null,
@@ -251,6 +252,7 @@ export async function POST(request: NextRequest) {
         summary: 'All transactions appear normal. No suspicious patterns detected.',
         action: 'No immediate action required.',
         key_evidence: [],
+        suspicious_hashes: [] as string[],
         agent1_cost: screening.cost,
         agent2_cost: null,
         agent3_cost: null,
@@ -281,6 +283,7 @@ export async function POST(request: NextRequest) {
         summary: `Suspicious activity detected. Risk level: ${forensic.risk_level}. Exercise caution.`,
         action: 'Research thoroughly before investing.',
         key_evidence: forensic.findings,
+        suspicious_hashes: screening.suspicious_hashes,
         agent1_cost: screening.cost,
         agent2_cost: forensic.cost,
         agent3_cost: null,
@@ -314,6 +317,7 @@ export async function POST(request: NextRequest) {
       summary: verdict.summary,
       action: verdict.action,
       key_evidence: verdict.key_evidence,
+      suspicious_hashes: screening.suspicious_hashes,
       agent1_cost: screening.cost,
       agent2_cost: forensic.cost,
       agent3_cost: verdict.cost,
@@ -360,6 +364,7 @@ async function persistScan(
     saved: number;
     escalated_to_agent2: boolean;
     escalated_to_agent3: boolean;
+    suspicious_hashes?: string[];
   }
 ): Promise<void> {
   const record: ScanRecord = {

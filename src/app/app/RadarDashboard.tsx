@@ -144,11 +144,13 @@ export default function RadarDashboard() {
         return res.json() as Promise<ScanResponse>;
       })
       .then((data) => {
-        // Mark all txs in the batch clean/flagged based on the single verdict
-        const status = data.escalated_to_agent2 ? 'FLAGGED' : 'CLEAN';
+        // Mark only the suspicious hashes as FLAGGED, and the rest as CLEAN
+        const flaggedHashes = data.suspicious_hashes || [];
         setStatusByHash((prev) => {
           const updates: Record<string, 'CLEAN' | 'FLAGGED'> = {};
-          batch.forEach((tx) => { updates[tx.hash] = status; });
+          batch.forEach((tx) => {
+            updates[tx.hash] = flaggedHashes.includes(tx.hash) ? 'FLAGGED' : 'CLEAN';
+          });
           return { ...prev, ...updates };
         });
 
