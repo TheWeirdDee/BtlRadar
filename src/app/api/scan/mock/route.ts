@@ -56,10 +56,23 @@ const TRAP_RESPONSE = {
   memory: null,
 };
 
+function toEVMHash(solAddress: string, length: number): string {
+  let hex = '';
+  for (let i = 0; i < solAddress.length; i++) {
+    hex += solAddress.charCodeAt(i).toString(16);
+  }
+  return '0x' + hex.substring(0, length).padEnd(length, '0');
+}
+
 export async function POST(request: NextRequest) {
   const { transactions } = await request.json();
   const batch = Array.isArray(transactions) ? transactions : (transactions ? [transactions] : []);
-  const isPlanted = batch.some((tx: { hash?: string }) => Boolean(tx?.hash) && tx.hash === PLANTED_HASH);
+  const EVM_PLANTED_HASH = PLANTED_HASH ? toEVMHash(PLANTED_HASH, 64) : null;
+
+  const isPlanted = batch.some((tx: { hash?: string }) => {
+    if (!tx?.hash) return false;
+    return tx.hash === PLANTED_HASH || tx.hash === EVM_PLANTED_HASH;
+  });
 
   if (!isPlanted) {
     return NextResponse.json(CLEAN_RESPONSE);
@@ -67,5 +80,13 @@ export async function POST(request: NextRequest) {
 
   // Simulate the real cascade's Agent 2 + Agent 3 processing time.
   await new Promise((resolve) => setTimeout(resolve, 3000));
-  return NextResponse.json(TRAP_RESPONSE);
+
+  const response = {
+    ...TRAP_RESPONSE,
+    suspicious_hashes: batch.some((tx: { hash?: string }) => tx?.hash === EVM_PLANTED_HASH)
+      ? [EVM_PLANTED_HASH]
+      : [PLANTED_HASH],
+  };
+
+  return NextResponse.json(response);
 }

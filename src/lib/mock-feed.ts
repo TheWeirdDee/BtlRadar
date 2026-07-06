@@ -30,12 +30,24 @@ function normaliseAmount(raw: string, targetAddress: string): string {
   return raw.replace(/\$BTL/g, 'tokens');
 }
 
+// Deterministically convert a Solana base58 string to a hex-like EVM address/hash
+function toEVMHash(solAddress: string, length: number): string {
+  let hex = '';
+  for (let i = 0; i < solAddress.length; i++) {
+    hex += solAddress.charCodeAt(i).toString(16);
+  }
+  return '0x' + hex.substring(0, length).padEnd(length, '0');
+}
+
 export function startMockFeed(
   onTx: (tx: Transaction) => void,
-  targetAddress = BTL_DEMO_ADDRESS
+  targetAddress = BTL_DEMO_ADDRESS,
+  chain: Chain = 'SOL'
 ): () => void {
   const feed = mockFeedData as MockTransaction[];
   const timers: ReturnType<typeof setTimeout>[] = [];
+
+  const useEVM = chain === 'EVM';
 
   // Sequential cadence of one emission every 1.5s, except the planted entry
   // at PLANTED_INDEX, which is pinned to fire at exactly PLANTED_DELAY_MS.
@@ -48,11 +60,11 @@ export function startMockFeed(
     timers.push(
       setTimeout(() => {
         onTx({
-          hash: entry.hash,
+          hash: useEVM ? toEVMHash(entry.hash, 64) : entry.hash,
           amount: normaliseAmount(entry.amount, targetAddress),
-          wallet: entry.wallet,
+          wallet: useEVM ? toEVMHash(entry.wallet, 40) : entry.wallet,
           timestamp: Date.now(),
-          chain: entry.chain,
+          chain,
         });
       }, delay)
     );

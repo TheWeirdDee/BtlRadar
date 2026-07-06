@@ -22,7 +22,7 @@ export function subscribeToFeed(
 
   // Always use mock in demo mode
   if (demoMode) {
-    return startMockFeed(onTx, address);
+    return startMockFeed(onTx, address, chain);
   }
 
   // If the relevant API key is absent, fall back to mock so the UI
@@ -30,14 +30,14 @@ export function subscribeToFeed(
   if (chain === 'SOL') {
     if (!hasHelius) {
       console.warn('[feed] HELIUS_API_KEY not set — using mock feed');
-      return startMockFeed(onTx, address);
+      return startMockFeed(onTx, address, chain);
     }
     return subscribeToSolanaTransactions(address, onTx);
   }
 
   if (!hasAlchemy) {
     console.warn('[feed] ALCHEMY_API_KEY not set — using mock feed');
-    return startMockFeed(onTx, address);
+    return startMockFeed(onTx, address, chain);
   }
   return subscribeToEVMTransactions(address, onTx);
 }
