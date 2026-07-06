@@ -56,46 +56,90 @@ async function fetchSolanaHistory(address: string): Promise<Transaction[]> {
   }
 }
 
-// Fetch the last 5 EVM token transfers using Alchemy Asset Transfers API
-async function fetchEVMHistory(address: string): Promise<Transaction[]> {
-  try {
-    const apiKey = process.env.ALCHEMY_API_KEY;
-    if (!apiKey) return [];
+// ERC-20 Transfer(address,address,uint256) topic
+const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
-    const response = await fetch(`https://eth-mainnet.g.alchemy.com/v2/${apiKey}`, {
+interface EthLog {
+  transactionHash: string;
+  topics: string[];
+  data: string;
+}
+
+// Fetch recent EVM token transfers using eth_getLogs with a 9-block window.
+// Alchemy free tier allows up to 10 blocks — we stay safely within that.
+// Retries up to 3 windows (27 blocks back) to find at least one transfer.
+async function fetchEVMHistory(address: string): Promise<Transaction[]> {
+  const apiKey = process.env.ALCHEMY_API_KEY;
+  if (!apiKey) return [];
+
+  const rpcUrl = `https://eth-mainnet.g.alchemy.com/v2/${apiKey}`;
+
+  try {
+    // 1. Get the latest block number
+    const blockRes = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'alchemy_getAssetTransfers',
-        params: [{
-          fromBlock: '0x0',
-          toBlock: 'latest',
-          contractAddresses: [address],
-          category: ['erc20'],
-          maxCount: 5,
-          order: 'desc'
-        }],
-      }),
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
     });
+    const blockData = await blockRes.json() as { result?: string };
+    if (!blockData.result) return [];
+    const latestBlock = parseInt(blockData.result, 16);
 
-    interface AlchemyTransfer {
-      hash: string;
-      value?: number;
-      from?: string;
+    // 2. Try up to 3 windows of 9 blocks each (~90 seconds per window)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const toBlock = latestBlock - attempt * 9;
+      const fromBlock = toBlock - 8; // 9-block window: [fromBlock, toBlock] inclusive
+      const fromHex = '0x' + fromBlock.toString(16);
+      const toHex = '0x' + toBlock.toString(16);
+
+      const logRes = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_getLogs',
+          params: [{
+            address,
+            topics: [TRANSFER_TOPIC],
+            fromBlock: fromHex,
+            toBlock: toHex,
+          }],
+        }),
+      });
+
+      const logData = await logRes.json() as { result?: EthLog[]; error?: { message: string } };
+      if (logData.error) {
+        console.warn(`[feed history] eth_getLogs attempt ${attempt + 1} error:`, logData.error.message);
+        continue;
+      }
+
+      const logs = logData.result ?? [];
+      if (logs.length === 0) continue;
+
+      // Parse up to 5 most recent logs — topics[1]=from, topics[2]=to, data=value
+      return logs.slice(-5).reverse().map((log) => {
+        const from = log.topics[1]
+          ? '0x' + log.topics[1].slice(26)
+          : 'unknown';
+        const rawValue = BigInt(log.data || '0x0');
+        // Display up to 6 decimal places; AAVE/DAI both use 18 decimals
+        const value = Number(rawValue) / 1e18;
+        const displayAmount = value > 0
+          ? `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} tokens`
+          : '0 tokens';
+        return {
+          hash: log.transactionHash,
+          amount: displayAmount,
+          wallet: from,
+          timestamp: Date.now(),
+          chain: 'EVM' as const,
+        };
+      });
     }
 
-    const { result } = await response.json();
-    if (!result?.transfers || !Array.isArray(result.transfers)) return [];
-
-    return (result.transfers as AlchemyTransfer[]).map((tx) => ({
-      hash: tx.hash,
-      amount: `${tx.value || 0} tokens`,
-      wallet: tx.from || 'unknown',
-      timestamp: Date.now(),
-      chain: 'EVM'
-    }));
+    // No transfers found in any of the 3 windows
+    return [];
   } catch (err) {
     console.error('[feed history] Failed to fetch EVM history:', err);
     return [];
