@@ -18,6 +18,7 @@ interface ScanResponse {
   summary: string;
   action: string;
   key_evidence: string[];
+  suspicious_hashes?: string[];
   benchmark_cost: number;
   actual_cost: number;
   saved: number;
