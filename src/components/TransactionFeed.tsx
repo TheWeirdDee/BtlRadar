@@ -41,6 +41,7 @@ export default function TransactionFeed({ address, chain, demo, statusByHash, on
   const listRef = useRef<HTMLDivElement>(null);
   const onTransactionRef = useRef(onTransaction);
   const pausedRef = useRef(paused);
+  const hasAutoPausedRef = useRef(false);
 
   useEffect(() => { onTransactionRef.current = onTransaction; }, [onTransaction]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
@@ -53,6 +54,7 @@ export default function TransactionFeed({ address, chain, demo, statusByHash, on
     setAllRows([]);
     setPage(0);
     setPaused(false);
+    hasAutoPausedRef.current = false;
   }
 
   useEffect(() => {
@@ -75,7 +77,8 @@ export default function TransactionFeed({ address, chain, demo, statusByHash, on
         const tx: Transaction = JSON.parse(event.data);
         setAllRows((prev) => {
           const updated = [{ ...tx, status: 'SCANNING' as TxStatus }, ...prev];
-          if (maxTxs && updated.length >= maxTxs) {
+          if (maxTxs && updated.length >= maxTxs && !hasAutoPausedRef.current) {
+            hasAutoPausedRef.current = true;
             setTimeout(() => setPaused(true), 0);
           }
           return updated.slice(0, 200);

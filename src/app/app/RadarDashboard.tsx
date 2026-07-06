@@ -124,7 +124,6 @@ export default function RadarDashboard() {
   const MAX_FEED_TXS = 50;     // stop scanning after this many txs total (auto-pauses feed)
   const txBufferRef = useRef<Transaction[]>([]);
   const batchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const totalTxScannedRef = useRef(0);
 
   const flushBatch = useCallback(() => {
     if (!target || txBufferRef.current.length === 0) return;
@@ -211,19 +210,14 @@ export default function RadarDashboard() {
   // Clear batch timer when target changes
   useEffect(() => {
     txBufferRef.current = [];
-    totalTxScannedRef.current = 0;
     if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
   }, [target]);
 
   const handleTransaction = useCallback(
     (tx: Transaction) => {
       if (!target) return;
-      // Stop scanning once we've hit the per-session cap — prevents USDC-style
-      // tokens from scanning 150+ txs continuously.
-      if (totalTxScannedRef.current >= MAX_FEED_TXS) return;
 
       txBufferRef.current.push(tx);
-      totalTxScannedRef.current += 1;
 
       // Flush immediately if batch is full, otherwise debounce
       if (txBufferRef.current.length >= MAX_BATCH_SIZE) {
