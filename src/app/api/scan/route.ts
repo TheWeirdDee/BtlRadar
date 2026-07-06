@@ -49,6 +49,19 @@ const KNOWN_SAFE_CONTRACTS: Record<string, { verdict: 'SAFE'; risk_score: number
   },
 };
 
+const KNOWN_TOKEN_IDENTITIES: Record<string, string> = {
+  '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': 'Aave Governance Token (AAVE)',
+  '0x6b175474e99094c44da98b954eedeac495271d0f': 'MakerDAO DAI Stablecoin (DAI)',
+  '0x9ea3b5b4ec044b70375236a281986106457d86dc': 'PAID Network Token (PAID)',
+  '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d': 'Bored Ape Yacht Club NFT Contract (BAYC)',
+  '3bbqrzzq9drxxfc9nuno9m1mbm9y7dvnbbk44bvpump': 'BTL Demo Token ($BTL)',
+  'epjfwdd5aufqssqem2qn1xzybapc8gweggkzwytdt1v': 'USD Coin (USDC) on Solana',
+  'so11111111111111111111111111111111111111112': 'Wrapped SOL (wSOL)',
+  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': 'USD Coin (USDC) on Ethereum',
+  '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': 'Wrapped Bitcoin (WBTC)',
+  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': 'Wrapped Ether (WETH)',
+};
+
 interface Transaction {
   hash: string;
   amount: string;
@@ -82,7 +95,7 @@ interface JudgeVerdict {
 
 // AGENT 1: High-speed screener
 // Job: flag or clear every transaction quickly
-async function agent1Screen(transactions: Transaction[], contractAddress: string) {
+async function agent1Screen(transactions: Transaction[], contractAddress: string, tokenIdentity: string) {
   const txList = transactions.map((tx, idx) =>
     `Tx #${idx + 1} | Hash: ${tx.hash} | Amount: ${tx.amount} | Wallet: ${tx.wallet}`
   ).join('\n');
@@ -96,7 +109,7 @@ async function agent1Screen(transactions: Transaction[], contractAddress: string
       },
       {
         role: 'user',
-        content: `Contract: ${contractAddress}\n\nRecent transactions:\n${txList}\n\nScreen these transactions. Flag anything suspicious.`
+        content: `Contract: ${contractAddress} (${tokenIdentity})\n\nRecent transactions:\n${txList}\n\nScreen these transactions. Flag anything suspicious.`
       }
     ],
     2000 // DeepSeek v4 reasoning tokens count toward max_tokens; too low truncates the JSON
@@ -115,7 +128,8 @@ async function agent1Screen(transactions: Transaction[], contractAddress: string
 async function agent2Forensic(
   flaggedTx: Transaction,
   contractAddress: string,
-  initialFlags: string[]
+  initialFlags: string[],
+  tokenIdentity: string
 ) {
   const result = await callBTL(
     MODELS.forensic,
@@ -129,7 +143,7 @@ Respond ONLY with valid JSON: {"escalate": true/false, "risk_level": "LOW/MEDIUM
       },
       {
         role: 'user',
-        content: `Contract: ${contractAddress}
+        content: `Contract: ${contractAddress} (${tokenIdentity})
 Flagged transaction: ${flaggedTx.hash}
 Wallet: ${flaggedTx.wallet}
 Amount: ${flaggedTx.amount}
@@ -156,7 +170,8 @@ async function agent3Judge(
   chain: string,
   allFlags: string[],
   forensicFindings: string[],
-  walletRisk: number
+  walletRisk: number,
+  tokenIdentity: string
 ) {
   const result = await callBTL(
     MODELS.judge,
@@ -167,7 +182,7 @@ async function agent3Judge(
       },
       {
         role: 'user',
-        content: `Contract: ${contractAddress}
+        content: `Contract: ${contractAddress} (${tokenIdentity})
 Chain: ${chain}
 Wallet risk score: ${walletRisk}/100
 
@@ -235,6 +250,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ...scanResult, memory: memoryContext });
     }
 
+    // Resolve token identity
+    const normalizedAddress = contractAddress.toLowerCase();
+    const tokenIdentity = KNOWN_TOKEN_IDENTITIES[normalizedAddress] || 'Unknown Token';
+
     // Use mock transactions if none provided (demo mode)
     const txData: Transaction[] = transactions || getMockTransactions();
 
@@ -242,7 +261,7 @@ export async function POST(request: NextRequest) {
     let totalBenchmarkCost = 0;
 
     // AGENT 1: Screen all transactions
-    const screening = await agent1Screen(txData, contractAddress);
+    const screening = await agent1Screen(txData, contractAddress, tokenIdentity);
     totalActualCost += screening.cost;
     totalBenchmarkCost += screening.benchmarkCost;
 
@@ -273,7 +292,7 @@ export async function POST(request: NextRequest) {
 
     // AGENT 2: Forensic analysis on flagged transaction
     const suspiciousTx = txData.find(tx => screening.suspicious_hashes.includes(tx.hash)) || txData[0];
-    const forensic = await agent2Forensic(suspiciousTx, contractAddress, screening.flags);
+    const forensic = await agent2Forensic(suspiciousTx, contractAddress, screening.flags, tokenIdentity);
     totalActualCost += forensic.cost;
     totalBenchmarkCost += forensic.benchmarkCost;
 
@@ -308,7 +327,8 @@ export async function POST(request: NextRequest) {
       resolvedChain,
       screening.flags,
       forensic.findings,
-      forensic.wallet_risk
+      forensic.wallet_risk,
+      tokenIdentity
     );
     totalActualCost += verdict.cost;
     totalBenchmarkCost += verdict.benchmarkCost;
