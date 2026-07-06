@@ -17,7 +17,7 @@ const MODELS = {
   forensic: 'gpt-4o-mini',        // mid-tier, fires only on a flag
   judge: 'deepseek-v4-pro',       // deep-reasoning pass, fires on escalation only
 } as const;
-import { saveScan, getMemory, formatMemoryContext, type ScanRecord } from '@/lib/memory';
+import { saveScan, getMemory, formatMemoryContext, formatMemoryContextWithCurrent, type ScanRecord } from '@/lib/memory';
 
 const KNOWN_SAFE_CONTRACTS: Record<string, { verdict: 'SAFE'; risk_score: number; summary: string }> = {
   // Solana
@@ -203,7 +203,6 @@ export async function POST(request: NextRequest) {
 
     // Retrieve persistent memory (RetainDB simulation) before the scan runs
     const memory = await getMemory(contractAddress);
-    const memoryContext = formatMemoryContext(memory);
 
     // ── KNOWN SAFE SHORT-CIRCUIT ──────────────────────────────────────────
     const normalizedAddress = contractAddress.toLowerCase();
@@ -228,6 +227,7 @@ export async function POST(request: NextRequest) {
       };
 
       await persistScan(contractAddress, resolvedChain, scanResult);
+      const memoryContext = formatMemoryContextWithCurrent(memory, scanResult.risk_score, scanResult.verdict);
       return NextResponse.json({ ...scanResult, memory: memoryContext });
     }
 
@@ -262,6 +262,7 @@ export async function POST(request: NextRequest) {
       };
 
       await persistScan(contractAddress, resolvedChain, scanResult);
+      const memoryContext = formatMemoryContextWithCurrent(memory, scanResult.risk_score, scanResult.verdict);
       return NextResponse.json({ ...scanResult, memory: memoryContext });
     }
 
@@ -291,6 +292,7 @@ export async function POST(request: NextRequest) {
       };
 
       await persistScan(contractAddress, resolvedChain, scanResult);
+      const memoryContext = formatMemoryContextWithCurrent(memory, scanResult.risk_score, scanResult.verdict);
       return NextResponse.json({ ...scanResult, memory: memoryContext });
     }
 
@@ -323,6 +325,7 @@ export async function POST(request: NextRequest) {
     };
 
     await persistScan(contractAddress, resolvedChain, scanResult);
+    const memoryContext = formatMemoryContextWithCurrent(memory, scanResult.risk_score, scanResult.verdict);
     return NextResponse.json({ ...scanResult, memory: memoryContext });
 
   } catch (error) {

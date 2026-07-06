@@ -194,3 +194,31 @@ export function formatMemoryContext(memory: ScanMemory): string | null {
   }
   return `Previously scanned ${memory.totalScans} time${memory.totalScans > 1 ? 's' : ''}. Last verdict: ${memory.previousVerdict} at ${memory.previousRisk}% risk.`;
 }
+
+// Computes memory context delta using the current scan result in real-time
+export function formatMemoryContextWithCurrent(
+  memory: ScanMemory,
+  currentRisk: number,
+  currentVerdict: string
+): string | null {
+  if (memory.totalScans === 0) return null;
+
+  const lastScan = memory.previousScans[0];
+  const lastRisk = lastScan.risk_score;
+  const lastVerdict = lastScan.verdict;
+
+  const delta = currentRisk - lastRisk;
+
+  const daysSince = lastScan.scanned_at
+    ? Math.floor((Date.now() - new Date(lastScan.scanned_at).getTime()) / 86_400_000)
+    : 0;
+  const timeLabel = daysSince > 0 ? `${daysSince}d ago` : 'earlier';
+
+  if (delta > 10) {
+    return `⚠️ Risk increased by ${delta}% since last scan ${timeLabel}. Previously: ${lastVerdict} at ${lastRisk}%.`;
+  }
+  if (delta < -10) {
+    return `✅ Risk decreased by ${Math.abs(delta)}% since last scan. Previously: ${lastVerdict} at ${lastRisk}%.`;
+  }
+  return `Previously scanned. Last verdict: ${lastVerdict} at ${lastRisk}% risk.`;
+}
