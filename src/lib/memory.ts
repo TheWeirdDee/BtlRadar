@@ -198,8 +198,7 @@ export function formatMemoryContext(memory: ScanMemory): string | null {
 // Computes memory context delta using the current scan result in real-time
 export function formatMemoryContextWithCurrent(
   memory: ScanMemory,
-  currentRisk: number,
-  currentVerdict: string
+  currentRisk: number
 ): string | null {
   if (memory.totalScans === 0) return null;
 
