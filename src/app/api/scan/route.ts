@@ -19,6 +19,36 @@ const MODELS = {
 } as const;
 import { saveScan, getMemory, formatMemoryContext, type ScanRecord } from '@/lib/memory';
 
+const KNOWN_SAFE_CONTRACTS: Record<string, { verdict: 'SAFE'; risk_score: number; summary: string }> = {
+  // Solana
+  'epjfwdd5aufqssqem2qn1xzybapc8gweggkzwytdt1v': {
+    verdict: 'SAFE',
+    risk_score: 4,
+    summary: 'USD Coin (USDC) is a regulated, asset-backed stablecoin pegged to the US Dollar. Safe contract structure.',
+  },
+  'so11111111111111111111111111111111111111112': {
+    verdict: 'SAFE',
+    risk_score: 2,
+    summary: 'Wrapped SOL (wSOL) is the native Solana utility wrapper. Verified contract deployed by the Solana Foundation.',
+  },
+  // EVM
+  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+    verdict: 'SAFE',
+    risk_score: 3,
+    summary: 'USD Coin (USDC) is a fully reserved, regulated stablecoin. Deployed by Circle, audited, and globally trusted.',
+  },
+  '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': {
+    verdict: 'SAFE',
+    risk_score: 2,
+    summary: 'Wrapped Bitcoin (WBTC) is a 1:1 Bitcoin-backed token on Ethereum. Managed by a trusted multi-sig custodian.',
+  },
+  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': {
+    verdict: 'SAFE',
+    risk_score: 1,
+    summary: 'Wrapped Ether (WETH) is the canonical utility wrapper for Ether on Ethereum. Deployed as a core immutable contract.',
+  },
+};
+
 interface Transaction {
   hash: string;
   amount: string;
@@ -174,6 +204,32 @@ export async function POST(request: NextRequest) {
     // Retrieve persistent memory (RetainDB simulation) before the scan runs
     const memory = await getMemory(contractAddress);
     const memoryContext = formatMemoryContext(memory);
+
+    // ── KNOWN SAFE SHORT-CIRCUIT ──────────────────────────────────────────
+    const normalizedAddress = contractAddress.toLowerCase();
+    const knownSafe = KNOWN_SAFE_CONTRACTS[normalizedAddress];
+
+    if (knownSafe) {
+      const scanResult = {
+        verdict: knownSafe.verdict,
+        risk_score: knownSafe.risk_score,
+        flags: [] as string[],
+        summary: knownSafe.summary,
+        action: 'No immediate action required.',
+        key_evidence: [] as string[],
+        agent1_cost: 0,
+        agent2_cost: null,
+        agent3_cost: null,
+        benchmark_cost: 0.02,
+        actual_cost: 0,
+        saved: 0.02,
+        escalated_to_agent2: false,
+        escalated_to_agent3: false,
+      };
+
+      await persistScan(contractAddress, resolvedChain, scanResult);
+      return NextResponse.json({ ...scanResult, memory: memoryContext });
+    }
 
     // Use mock transactions if none provided (demo mode)
     const txData: Transaction[] = transactions || getMockTransactions();

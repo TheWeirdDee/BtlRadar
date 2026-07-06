@@ -173,12 +173,16 @@ export default function RadarDashboard() {
             (data.escalated_to_agent3 ? 1 : 0),
         }));
 
-        if (data.escalated_to_agent2) {
+        const SEVERITY = { SAFE: 0, RISKY: 1, TRAP: 2 };
+        const currentSeverity = verdict ? SEVERITY[verdict] : -1;
+        const newSeverity = SEVERITY[data.verdict];
+
+        if (data.escalated_to_agent2 || newSeverity >= currentSeverity) {
           setForensicActive(true);
           setForensicFindings(data.flags);
         }
 
-        if (data.escalated_to_agent3) {
+        if (newSeverity >= currentSeverity) {
           setVerdict(data.verdict);
           setRiskScore(data.risk_score);
           setSummary(data.summary);

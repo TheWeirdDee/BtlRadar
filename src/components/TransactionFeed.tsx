@@ -59,6 +59,10 @@ export default function TransactionFeed({ address, chain, demo, statusByHash, on
 
   useEffect(() => {
     if (!address) return;
+    if (paused) {
+      setConnected(false);
+      return;
+    }
 
     const useMock = Boolean(demo);
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -101,10 +105,10 @@ export default function TransactionFeed({ address, chain, demo, statusByHash, on
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      source.close();
+      if (source) source.close();
       setConnected(false);
     };
-  }, [address, chain, demo, maxTxs]);
+  }, [address, chain, demo, maxTxs, paused]);
 
   // Resolve current page's rows — page 0 = newest
   const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE));
