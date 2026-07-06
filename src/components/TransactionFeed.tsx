@@ -54,15 +54,15 @@ export default function TransactionFeed({ address, chain, demo, statusByHash, on
     setAllRows([]);
     setPage(0);
     setPaused(false);
-    hasAutoPausedRef.current = false;
   }
 
   useEffect(() => {
+    hasAutoPausedRef.current = false;
+  }, [address, chain, demo]);
+
+  useEffect(() => {
     if (!address) return;
-    if (paused) {
-      setConnected(false);
-      return;
-    }
+    if (paused) return;
 
     const useMock = Boolean(demo);
     let timeoutId: ReturnType<typeof setTimeout> | null = null;

@@ -35,17 +35,17 @@ export function subscribeToEVMTransactions(
   const target = contractAddress.toLowerCase();
 
   ws.on('open', () => {
-    // Subscribed unfiltered and filtered client-side below. The server-side
-    // `toAddress` filter on this method returned zero events in testing
-    // (verified: unfiltered delivers a firehose immediately, so the
-    // subscription itself works — the address filter appears gated on this
-    // account's tier) despite acking the subscription normally, so this is
-    // the version that actually works regardless of plan.
+    // Utilize Alchemy's server-side filtering at the provider level.
+    // Specifying the target address in the toAddress property of the option parameter
+    // filters the mempool firehose at source, preventing server socket floods.
     ws.send(JSON.stringify({
       jsonrpc: '2.0',
       id: 1,
       method: 'eth_subscribe',
-      params: ['alchemy_pendingTransactions'],
+      params: [
+        'alchemy_pendingTransactions',
+        { toAddress: target }
+      ],
     }));
   });
 

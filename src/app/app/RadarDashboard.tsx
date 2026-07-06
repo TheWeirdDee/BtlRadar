@@ -209,7 +209,7 @@ export default function RadarDashboard() {
         setStatusByHash((prev) => ({ ...prev, ...updates }));
       })
       .finally(() => setForensicAnalyzing(false));
-  }, [target, demo]);
+  }, [target, demo, verdict]);
 
   // Clear batch timer when target changes
   useEffect(() => {
