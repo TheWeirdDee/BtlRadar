@@ -139,7 +139,7 @@ export default function AnimatedCascadePreview() {
           <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
             <div>
               <div className="text-xs font-bold uppercase tracking-widest text-zinc-400">Agent 1 · Screener</div>
-              <div className="text-[0.65rem] tracking-wide text-zinc-500 mt-1">deepseek-v4-flash via BTL</div>
+              <div className="text-[0.65rem] tracking-wide text-zinc-500 mt-1">DeepSeek Chat · via BTL</div>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-green">
               <span className="h-1.5 w-1.5 animate-pulse bg-green rounded-full" />
@@ -179,7 +179,7 @@ export default function AnimatedCascadePreview() {
           <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
             <div>
               <div className="text-xs font-bold uppercase tracking-widest text-zinc-400">Agent 2 · Forensic</div>
-              <div className="text-[0.65rem] tracking-wide text-zinc-500 mt-1">deepseek-v4-pro via BTL</div>
+              <div className="text-[0.65rem] tracking-wide text-zinc-500 mt-1">GPT-4o mini · via BTL</div>
             </div>
             {typingLineIndex >= 0 && (
               <div className="flex items-center gap-1.5 text-xs text-yellow">
@@ -217,7 +217,7 @@ export default function AnimatedCascadePreview() {
           <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
             <div>
               <div className="text-xs font-bold uppercase tracking-widest text-zinc-400">Agent 3 · Judge</div>
-              <div className="text-[0.65rem] tracking-wide text-zinc-500 mt-1">deepseek-v4-pro · deep reasoning via BTL</div>
+              <div className="text-[0.65rem] tracking-wide text-zinc-500 mt-1">DeepSeek R1 · via BTL</div>
             </div>
             {verdictActive && (
               <div className="flex items-center gap-1.5 text-xs text-red animate-pulse">

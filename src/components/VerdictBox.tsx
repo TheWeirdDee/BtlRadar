@@ -21,13 +21,13 @@ export default function VerdictBox({ verdict, riskScore, summary, action, keyEvi
   const styles = VERDICT_STYLES[verdict];
 
   return (
-    <div className={`flex h-full flex-col border ${styles.border} ${styles.bg} font-mono`}>
+    <div className={`flex h-full flex-col border ${styles.border} ${styles.bg} font-mono min-h-0`}>
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 animate-pulse bg-red" />
           <span className="text-sm tracking-wide text-text">Agent 3 · Judge</span>
         </div>
-        <span className="text-xs text-muted">deepseek-v4-pro · via BTL</span>
+        <span className="text-xs text-muted">DeepSeek V4 Pro · via BTL</span>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">

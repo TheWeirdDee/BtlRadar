@@ -1,5 +1,8 @@
 // Demo transaction feed — plays back src/data/mock-feed.json on a timer.
 // Falls back for both chains when no live WebSocket credentials are configured.
+//
+// When scanning a non-BTL address, amounts are shown as generic "tokens"
+// rather than "$BTL" so the demo data doesn't mislead.
 
 import type { Transaction, Chain } from './types';
 import mockFeedData from '@/data/mock-feed.json';
@@ -16,13 +19,27 @@ const TICK_MS = 1500;
 const PLANTED_INDEX = 4;
 const PLANTED_DELAY_MS = 6000;
 
-export function startMockFeed(onTx: (tx: Transaction) => void): () => void {
+// The demo is scripted around the $BTL contract address. For any other
+// address, we strip the "$BTL" label from amounts so the demo data
+// doesn't claim to be real $BTL transactions.
+const BTL_DEMO_ADDRESS = '3bBQrzzq9DRXXFfC9nUno9m1MBm9Y7dVnBBK44bVpump';
+
+function normaliseAmount(raw: string, targetAddress: string): string {
+  if (targetAddress.toLowerCase() === BTL_DEMO_ADDRESS.toLowerCase()) return raw;
+  // Replace "$BTL" label with generic "tokens"
+  return raw.replace(/\$BTL/g, 'tokens');
+}
+
+export function startMockFeed(
+  onTx: (tx: Transaction) => void,
+  targetAddress = BTL_DEMO_ADDRESS
+): () => void {
   const feed = mockFeedData as MockTransaction[];
   const timers: ReturnType<typeof setTimeout>[] = [];
 
   // Sequential cadence of one emission every 1.5s, except the planted entry
-  // at PLANTED_INDEX, which is pinned to fire at exactly T+45s. Later entries
-  // resume the normal cadence from that point so the feed stays in order.
+  // at PLANTED_INDEX, which is pinned to fire at exactly PLANTED_DELAY_MS.
+  // Later entries resume the normal cadence from that point so the feed stays in order.
   let nextDelay = 0;
   feed.forEach((entry, index) => {
     const delay = index === PLANTED_INDEX ? PLANTED_DELAY_MS : nextDelay;
@@ -32,7 +49,7 @@ export function startMockFeed(onTx: (tx: Transaction) => void): () => void {
       setTimeout(() => {
         onTx({
           hash: entry.hash,
-          amount: entry.amount,
+          amount: normaliseAmount(entry.amount, targetAddress),
           wallet: entry.wallet,
           timestamp: Date.now(),
           chain: entry.chain,

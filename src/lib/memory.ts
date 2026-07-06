@@ -1,12 +1,14 @@
 // src/lib/memory.ts
-// Simulates RetainDB persistent memory using Supabase
-// Swap this file's internals for RetainDB SDK if BTL grants access
+// Persistent scan memory — RetainDB v5 as primary, Supabase as fallback.
+// RetainDB v5 API: new RetainDB({ apiKey }) then client.remember(content, { userId })
+//                  and client.search(query, { userId }) or client.user(id).listMemory()
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { RetainDB } from '@retaindb/sdk';
 
-// Created lazily (not at module load) so importing this file never throws
-// during Next.js build-time page-data collection when env vars aren't set.
+// Lazy initialized clients
 let supabase: SupabaseClient | null = null;
+let retaindb: RetainDB | null = null;
 
 function getSupabase(): SupabaseClient {
   if (!supabase) {
@@ -16,6 +18,20 @@ function getSupabase(): SupabaseClient {
     );
   }
   return supabase;
+}
+
+function getRetainDB(): RetainDB | null {
+  if (retaindb) return retaindb;
+  // RETAINDB_API_KEY uses wsk_... format — do NOT fall back to BTL_API_KEY
+  const apiKey = process.env.RETAINDB_API_KEY;
+  if (!apiKey) return null;
+  try {
+    retaindb = new RetainDB({ apiKey });
+    return retaindb;
+  } catch (err) {
+    console.warn('[memory] RetainDB init failed, using Supabase only:', err);
+    return null;
+  }
 }
 
 export interface ScanRecord {
@@ -46,43 +62,102 @@ export interface ScanMemory {
 
 // Save a scan result to persistent memory
 export async function saveScan(scan: ScanRecord): Promise<void> {
-  const { error } = await getSupabase()
-    .from('scan_history')
-    .insert([scan]);
+  const record: ScanRecord = {
+    ...scan,
+    scanned_at: scan.scanned_at || new Date().toISOString(),
+  };
 
-  if (error) {
-    console.error('Failed to save scan:', error);
+  // 1. RetainDB v5: remember(content, { userId })
+  //    userId = contract address (lowercased) — scopes memory per contract
+  const db = getRetainDB();
+  if (db) {
+    try {
+      await db.remember(JSON.stringify(record), {
+        userId: record.contract_address.toLowerCase(),
+      });
+      console.log('[memory] Saved scan to RetainDB');
+    } catch (err) {
+      console.error('[memory] RetainDB save failed:', err);
+    }
+  }
+
+  // 2. Supabase — always write so we have a reliable fallback
+  try {
+    const { error } = await getSupabase().from('scan_history').insert([record]);
+    if (error) console.error('[memory] Supabase save failed:', error);
+    else console.log('[memory] Saved scan to Supabase');
+  } catch (err) {
+    console.error('[memory] Supabase save failed (catch):', err);
   }
 }
 
 // Retrieve memory for a contract address
-// This is the RetainDB simulation — persistent recall across sessions
 export async function getMemory(contractAddress: string): Promise<ScanMemory> {
-  // Get all previous scans for this contract
-  const { data: scans, error } = await getSupabase()
-    .from('scan_history')
-    .select('*')
-    .eq('contract_address', contractAddress.toLowerCase())
-    .order('scanned_at', { ascending: false })
-    .limit(10);
+  const EMPTY: ScanMemory = {
+    previousScans: [],
+    riskTrend: 'NEW',
+    riskDelta: 0,
+    firstSeen: null,
+    totalScans: 0,
+    previousVerdict: null,
+    previousRisk: null,
+  };
 
-  if (error || !scans || scans.length === 0) {
-    return {
-      previousScans: [],
-      riskTrend: 'NEW',
-      riskDelta: 0,
-      firstSeen: null,
-      totalScans: 0,
-      previousVerdict: null,
-      previousRisk: null,
-    };
+  // 1. Try RetainDB v5
+  const db = getRetainDB();
+  if (db) {
+    try {
+      // v5: user(id).listMemory() returns memory items
+      const items = await (db as any).raw().user(contractAddress.toLowerCase()).listMemory();
+      if (items && items.length > 0) {
+        const scans: ScanRecord[] = [];
+        for (const item of items) {
+          try {
+            const content = typeof item === 'string' ? item : (item as { content?: string }).content ?? '';
+            const parsed = JSON.parse(content) as ScanRecord;
+            if (parsed?.contract_address) scans.push(parsed);
+          } catch {
+            // skip non-scan memory entries
+          }
+        }
+        if (scans.length > 0) {
+          return buildMemory(scans);
+        }
+      }
+    } catch (err) {
+      console.warn('[memory] RetainDB read failed, falling back to Supabase:', err);
+    }
   }
 
-  const latest = scans[0];
-  const previous = scans[1];
+  // 2. Supabase fallback
+  try {
+    const { data: scans, error } = await getSupabase()
+      .from('scan_history')
+      .select('*')
+      .eq('contract_address', contractAddress.toLowerCase())
+      .order('scanned_at', { ascending: false })
+      .limit(10);
 
-  // Calculate risk trend
-  let riskTrend: ScanMemory['riskTrend'] = 'STABLE';
+    if (error || !scans || scans.length === 0) return EMPTY;
+    return buildMemory(scans as ScanRecord[]);
+  } catch (err) {
+    console.error('[memory] Supabase read failed:', err);
+    return EMPTY;
+  }
+}
+
+function buildMemory(scans: ScanRecord[]): ScanMemory {
+  // Sort newest first
+  const sorted = [...scans].sort((a, b) => {
+    const ta = a.scanned_at ? new Date(a.scanned_at).getTime() : 0;
+    const tb = b.scanned_at ? new Date(b.scanned_at).getTime() : 0;
+    return tb - ta;
+  });
+
+  const latest = sorted[0];
+  const previous = sorted[1];
+
+  let riskTrend: ScanMemory['riskTrend'] = 'NEW';
   let riskDelta = 0;
 
   if (previous) {
@@ -90,36 +165,32 @@ export async function getMemory(contractAddress: string): Promise<ScanMemory> {
     if (riskDelta > 10) riskTrend = 'INCREASING';
     else if (riskDelta < -10) riskTrend = 'DECREASING';
     else riskTrend = 'STABLE';
-  } else {
-    riskTrend = 'NEW';
   }
 
   return {
-    previousScans: scans,
+    previousScans: sorted,
     riskTrend,
     riskDelta,
-    firstSeen: scans[scans.length - 1]?.scanned_at || null,
-    totalScans: scans.length,
-    previousVerdict: previous?.verdict || null,
-    previousRisk: previous?.risk_score || null,
+    firstSeen: sorted[sorted.length - 1]?.scanned_at ?? null,
+    totalScans: sorted.length,
+    previousVerdict: previous?.verdict ?? null,
+    previousRisk: previous?.risk_score ?? null,
   };
 }
 
-// Format memory context for display in UI
+// Format memory context string for display in the UI banner
 export function formatMemoryContext(memory: ScanMemory): string | null {
   if (memory.riskTrend === 'NEW') return null;
 
   const daysSince = memory.firstSeen
-    ? Math.floor((Date.now() - new Date(memory.firstSeen).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor((Date.now() - new Date(memory.firstSeen).getTime()) / 86_400_000)
     : 0;
 
   if (memory.riskTrend === 'INCREASING') {
-    return `⚠️ Risk increased by ${memory.riskDelta}% since last scan ${daysSince > 0 ? `${daysSince} days ago` : 'earlier'}. Previously: ${memory.previousVerdict} at ${memory.previousRisk}%.`;
+    return `⚠️ Risk increased by ${memory.riskDelta}% since last scan ${daysSince > 0 ? `${daysSince}d ago` : 'earlier'}. Previously: ${memory.previousVerdict} at ${memory.previousRisk}%.`;
   }
-
   if (memory.riskTrend === 'DECREASING') {
     return `✅ Risk decreased by ${Math.abs(memory.riskDelta)}% since last scan. Previously: ${memory.previousVerdict} at ${memory.previousRisk}%.`;
   }
-
   return `Previously scanned ${memory.totalScans} time${memory.totalScans > 1 ? 's' : ''}. Last verdict: ${memory.previousVerdict} at ${memory.previousRisk}% risk.`;
 }

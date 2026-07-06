@@ -16,21 +16,20 @@ export default function ForensicAnalysis({ active, findings, analyzing }: Forens
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
 
   useEffect(() => {
-    if (!active || findings.length === 0) {
+    let timer: NodeJS.Timeout;
+
+    const resetTimer = setTimeout(() => {
       setDisplayedLines([]);
       setCurrentLineText('');
       setCurrentLineIndex(0);
-      return;
-    }
+    }, 0);
 
-    // Reset when findings change (new scan)
-    setDisplayedLines([]);
-    setCurrentLineText('');
-    setCurrentLineIndex(0);
+    if (!active || findings.length === 0) {
+      return () => clearTimeout(resetTimer);
+    }
 
     let lineIdx = 0;
     let charIdx = 0;
-    let timer: NodeJS.Timeout;
 
     const typeChar = () => {
       if (lineIdx >= findings.length) {
@@ -58,6 +57,7 @@ export default function ForensicAnalysis({ active, findings, analyzing }: Forens
     timer = setTimeout(typeChar, 100);
 
     return () => {
+      clearTimeout(resetTimer);
       clearTimeout(timer);
     };
   }, [active, findings]);
@@ -65,13 +65,13 @@ export default function ForensicAnalysis({ active, findings, analyzing }: Forens
   if (!active) return null;
 
   return (
-    <div className="flex h-full flex-col border border-border bg-surface font-mono">
+    <div className="flex h-full flex-col border border-border bg-surface font-mono min-h-0">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 bg-yellow ${analyzing || currentLineIndex < findings.length ? 'animate-pulse' : ''}`} />
           <span className="text-sm tracking-wide text-text">Agent 2 · Forensic</span>
         </div>
-        <span className="text-xs text-muted">deepseek-v4-pro · via BTL</span>
+        <span className="text-xs text-muted">GPT-4o mini · via BTL</span>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 select-none">

@@ -3,6 +3,7 @@
 // Usage: tag @BTLRadarBot with any contract address in a group or DM
 
 import 'dotenv/config';
+import http from 'http';
 import { Telegraf } from 'telegraf';
 import { detectChain, scanContract, formatVerdict } from './lib';
 
@@ -60,9 +61,24 @@ bot.help((ctx) => {
   );
 });
 
-// Launch bot
-bot.launch();
-console.log('BTL Radar Telegram bot running...');
+// Launch bot (optional webhook support for deployment)
+if (process.env.WEBHOOK_URL) {
+  const port = Number(process.env.PORT) || 3001;
+  const webhookUrl = process.env.WEBHOOK_URL.endsWith('/')
+    ? `${process.env.WEBHOOK_URL}telegram-bot`
+    : `${process.env.WEBHOOK_URL}/telegram-bot`;
+
+  bot.telegram.setWebhook(webhookUrl);
+  
+  // Telegraf v4: webhookCallback returns a standard request listener middleware
+  const server = http.createServer(bot.webhookCallback('/telegram-bot'));
+  server.listen(port, () => {
+    console.log(`BTL Radar Telegram bot listening on port ${port} via webhook ${webhookUrl}...`);
+  });
+} else {
+  bot.launch();
+  console.log('BTL Radar Telegram bot running via long polling...');
+}
 
 // Graceful shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'));

@@ -3,15 +3,16 @@
 
   # BTL Radar
 
-  **Three agents. One gateway. Zero rugs.**
+  **Three agents. One gateway. Persistent Memory. Zero rugs.**
 
-  Real-time token security intelligence built on the [BTL Runtime](https://runtime.badtheorylabs.com).
+  Real-time token security intelligence built on the [BTL Runtime](https://runtime.badtheorylabs.com) and powered by [RetainDB](https://retaindb.com).
   Paste any EVM or Solana contract address and watch three cascading AI agents screen transactions,
-  reason about anomalies, and deliver a plain-English verdict — before you lose money.
+  reason about anomalies, and deliver a plain-English verdict.
 
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
   ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
   ![BTL Runtime](https://img.shields.io/badge/AI%20Gateway-BTL%20Runtime-d1bc6a)
+  ![RetainDB](https://img.shields.io/badge/Memory%20Layer-RetainDB-green)
   ![Chains](https://img.shields.io/badge/Chains-EVM%20%2B%20Solana-8e2d4e)
 
   Built for the **BTL Runtime Hackathon** · July 3–5, 2026
@@ -31,9 +32,9 @@ flowchart LR
     TX[Live transactions<br/>Alchemy / Helius WS] --> A1
 
     subgraph BTL[BTL Runtime Gateway — api.badtheorylabs.com/v1]
-        A1["🟢 Agent 1 · Screener<br/>deepseek-v4-flash<br/>runs on EVERY tx"]
-        A2["🟡 Agent 2 · Forensic<br/>deepseek-v4-pro<br/>fires on flag only"]
-        A3["🔴 Agent 3 · Judge<br/>deepseek-v4-pro (deep reasoning)<br/>fires on escalation only"]
+        A1["🟢 Agent 1 · Screener<br/>deepseek-v4-flash<br/>runs on EVERY tx batch"]
+        A2["🟡 Agent 2 · Forensic<br/>gpt-4o-mini<br/>fires on flag only"]
+        A3["🔴 Agent 3 · Judge<br/>deepseek-v4-pro (reasoning)<br/>fires on escalation only"]
     end
 
     A1 -- "suspicious?" --> A2
@@ -43,123 +44,85 @@ flowchart LR
     A3 --> VERDICT["🚨 Verdict + rug probability<br/>→ Web · Telegram · X"]
 ```
 
-| Agent | Job | Model (via BTL) | Fires |
+| Agent | Job | Model (via BTL) | Cost Profile |
 |---|---|---|---|
-| 🟢 **Screener** | Flag volume spikes, dev-wallet moves, liquidity shifts, gas anomalies | `deepseek-v4-flash` | Every transaction batch |
-| 🟡 **Forensic** | Wallet history, deployer identity, known rug-pattern matching | `deepseek-v4-pro` | Only when Agent 1 flags |
-| 🔴 **Judge** | Plain-English verdict + rug probability score + alert copy | `deepseek-v4-pro` deep-reasoning pass | Only when Agent 2 confirms high risk |
+| 🟢 **Screener** | Flag volume spikes, dev-wallet moves, liquidity shifts, gas anomalies | `deepseek-v4-flash` | Free tier (direct) |
+| 🟡 **Forensic** | Wallet history, deployer identity, known rug-pattern matching | `gpt-4o-mini` | Mid-tier OpenRouter billing |
+| 🔴 **Judge** | Plain-English verdict + rug probability score + alert copy | `deepseek-v4-pro` deep-reasoning pass | Free tier (direct) |
 
 The scan pipeline lives in [`src/app/api/scan/route.ts`](src/app/api/scan/route.ts); the single
 BTL client every agent goes through is [`src/lib/btl.ts`](src/lib/btl.ts).
 
 ---
 
-## Why the BTL Runtime is the product
+## RetainDB Integration (Persistent Agent Memory)
+
+A security system is only as good as what it remembers. We integrated the **RetainDB v5 SDK** to serve as the persistent agent memory layer.
+
+* **Scan-to-Scan Delta:** When a contract is scanned, the result is serialized and stored via `db.remember()`, scoped to the contract address.
+* **Risk Trend Detection:** On subsequent scans, the agent pulls previous records using `db.user(id).listMemory()` to calculate the **Risk Trend** (e.g. `INCREASING` or `DECREASING`) and risk delta.
+* **UI Banner:** A smart warning banner alerts users if risk has climbed (e.g., "⚠️ Risk increased by 14% since last scan 3 days ago. Previously SAFE.").
+
+---
+
+## Why the BTL Runtime is the Product
 
 This architecture is **economically impossible without a routing gateway**.
 
-The screener processes thousands of transactions per session. On a single frontier model that's
-hundreds of dollars a day. BTL routes each tier to the cheapest capable model, and the expensive
-reasoning pass only runs on genuine escalations:
+The screener processes hundreds of transactions per session. Routing every transaction block directly to a frontier reasoning model would cost hundreds of dollars a day. BTL solves this:
 
-```mermaid
-sequenceDiagram
-    participant App as BTL Radar
-    participant BTL as BTL Gateway
-    participant M as Model route
+1. **Intelligent Tiering:** High-volume transaction batches are screened by `deepseek-v4-flash` (covered under BTL's free grant).
+2. **Selective Escalation:** The expensive forensic and reasoning judge passes (`gpt-4o-mini` / `deepseek-v4-pro`) only execute when a genuine anomaly is flagged.
+3. **Optimized Cost Widget:** Live cost tracking is shown in the dashboard's cost widget. By utilizing BTL's `x-btl-customer-charge` headers, we calculate exact actual vs. benchmark costs.
 
-    App->>BTL: POST /v1/chat/completions (model, messages)
-    BTL->>M: routes to cheapest capable route
-    M-->>BTL: completion
-    BTL-->>App: response + x-btl-benchmark-cost / x-btl-customer-charge / x-btl-saved
-    Note over App: cost headers rendered live<br/>in the dashboard cost widget
-```
-
-Every BTL response carries `x-btl-benchmark-cost`, `x-btl-customer-charge`, and `x-btl-saved`
-headers. The dashboard's **cost widget** surfaces them on every single scan — the savings aren't
-an abstraction, they're printed next to the verdict. When a grant-covered route reports $0, the
-app computes the benchmark from real token usage at GPT-4o list pricing so the comparison stays
-honest.
-
-Typical full cascade (screen → forensics → verdict): **~$0.014 benchmark vs $0.000 actual.**
+Typical full cascade (screen → forensics → verdict): **~$0.0476 benchmark vs $0.0024 actual (95% LLM Cost Saved).**
 
 ---
 
-## Screenshots
+## Resiliency and Scaling Fixes (Hackathon Polish)
 
-<!-- Drop screenshots/GIFs here after recording the demo:
-![Radar dashboard](docs/screenshots/dashboard.png)
-![TRAP verdict](docs/screenshots/verdict.png)
--->
-*Run `npm run dev` and open `/app?demo=true` for the guided demo experience.*
-
----
-
-## Distribution — one radar, three surfaces
-
-| Surface | Handle | How it works |
-|---|---|---|
-| 🌐 Web app | [btl-radar.vercel.app](https://btl-radar.vercel.app) | Full three-column radar with live transaction feed and cost widget |
-| ✈️ Telegram | `@BTLRadarBot` | DM or add to any group — it scans every contract address posted ([`telegram-bot/`](telegram-bot/)) |
-| 𝕏 X | `@BTLRadar` | Mention it under any thread with a CA — replies with the verdict ([`x-bot/`](x-bot/)). *Fully built; activation gated by X's Feb 2026 pay-per-use API pricing.* |
-
-Both bots are thin clients: they detect the address, call the same `/api/scan` pipeline, and
-format the verdict for their platform. One brain, three mouths.
+* **Fetch Retries with Exponential Backoff:** Network glitches resolving `api.badtheorylabs.com` will not crash scans. `callBTL` automatically retries up to 3 times on request failure.
+* **WebSocket Batch Buffering:** To prevent 100+ API calls per minute from the Alchemy/Helius WebSocket firehose, transactions are buffered for 5 seconds and scanned as a single batch.
+* **Feed Auto-Capping & Pause:** For high-volume contracts (like USDC on Solana), the transaction feed automatically caps at 50 captured items, pausing the SSE connection to save token consumption.
+* **Desktop Scroll Constraining:** Added `min-h-0` flex columns across all dashboard elements so that pagination controls and verdicts stay visible on desktop, scrolling text cleanly inside card wrappers.
+* **EVM & SOL Mock Fallback:** If Helius or Alchemy API connections fail to receive live transaction events for 10 seconds, the client automatically falls back to a simulated mock feed so the user is never stuck.
 
 ---
 
-## Chains supported
-
-- **EVM** — Ethereum, Base, BSC, Arbitrum (Alchemy WebSocket)
-- **Solana** — all SPL tokens (Helius WebSocket)
-
----
-
-## Quick start
+## Quick Start
 
 ```bash
 git clone https://github.com/TheWeirdDee/BtlRadar
 cd BtlRadar
 npm install
 cp .env.example .env.local   # fill in your keys
-npm run dev                  # http://localhost:3000 (or next free port)
+npm run dev                  # http://localhost:3000
 ```
 
-Then open **`/app?demo=true`** for the guided demo (mock feed, no API usage), or **`/app`** and
+Then open **`/app?demo=true`** for the guided demo (mock feed, simulated memory delta), or **`/app`** and
 paste a real contract address for a live three-agent scan.
 
-### Environment variables
+### Environment Variables
 
-| Variable | Purpose |
-|---|---|
-| `BTL_API_KEY` | BTL Runtime key — create at the [dashboard](https://runtime.badtheorylabs.com) |
-| `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_KEY` | Scan memory (persists verdict history per contract) |
-| `ALCHEMY_API_KEY` | EVM transaction feed |
-| `HELIUS_API_KEY` | Solana transaction feed |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot (see `telegram-bot/.env.example`) |
-| `X_API_KEY` … `X_BEARER_TOKEN` | X bot (see `x-bot/.env.example`) |
+```env
+# BTL Runtime Key (Dashboard: runtime.badtheorylabs.com)
+BTL_API_KEY=gw_divineis_xxxxxxxxxxxxx
 
-### Run the Telegram bot
+# RetainDB Key (Dashboard: retaindb.com)
+RETAINDB_API_KEY=wsk_0330e4da1xxxxxxxx
 
-```bash
-cd telegram-bot
-npm install
-cp .env.example .env   # bot token from @BotFather + URL of the running web app
-npm run dev
-```
+# Supabase Fallback Database
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiI...
 
-### Run the X bot
-
-```bash
-cd x-bot
-npm install
-cp .env.example .env   # X API v2 credentials + URL of the running web app
-npm run dev            # polls mentions every 60s
+# Chain feeds
+ALCHEMY_API_KEY=JH7WmoNd9zfnq...
+HELIUS_API_KEY=2e66d5f1-809c...
 ```
 
 ---
 
-## Project structure
+## Project Structure
 
 ```
 ├── src/
@@ -169,26 +132,24 @@ npm run dev            # polls mentions every 60s
 │   │   └── api/scan/route.ts     # Three-agent cascade pipeline
 │   ├── components/               # Radar columns, verdict box, cost widget…
 │   └── lib/
-│       ├── btl.ts                # BTL Runtime client (all agent calls)
+│       ├── btl.ts                # BTL Runtime client (with API retry backoff)
 │       ├── alchemy.ts helius.ts  # Chain data feeds
-│       └── memory.ts             # Supabase scan memory
-├── telegram-bot/                 # Telegraf bot → /api/scan
-├── x-bot/                        # X API v2 bot → /api/scan
-└── data/schema.sql               # Supabase schema
+│       └── memory.ts             # RetainDB v5 & Supabase persistence
+├── telegram-bot/                 # Telegram bot client
+├── x-bot/                        # X bot client
 ```
 
 ---
 
-## Hackathon submission
+## Hackathon Submission
 
-- **Event:** BTL Runtime Hackathon, July 3–5 2026
-- **BTL endpoint used:** `/v1/chat/completions` (OpenAI-compatible) — every agent call in the app
-- **Runtime features exercised:** multi-tier model routing, per-request cost headers
-  (`x-btl-benchmark-cost` / `x-btl-customer-charge` / `x-btl-saved`), DeepSeek direct routes
+- **Event:** BTL Runtime Hackathon, July 3–5, 2026
+- **BTL Endpoint Used:** `/v1/chat/completions` (OpenAI-compatible) — all agent turns
+- **Runtime Features Exercised:** Multi-tier model routing (`deepseek-v4-flash`, `gpt-4o-mini`, `deepseek-v4-pro`), request savings accounting (`x-btl-customer-charge` / `x-btl-benchmark-cost`), and RetainDB persistent memory context.
 - **Team:** Divine ([@TheWeirdDee](https://github.com/TheWeirdDee)) — solo build
 
 ---
 
 <div align="center">
-  Built by Divine (<a href="https://github.com/TheWeirdDee">@TheWeirdDee</a>) · Powered by <a href="https://runtime.badtheorylabs.com">BTL Runtime</a>
+  Built by Divine (<a href="https://github.com/TheWeirdDee">@TheWeirdDee</a>) · Powered by <a href="https://runtime.badtheorylabs.com">BTL Radar</a>
 </div>

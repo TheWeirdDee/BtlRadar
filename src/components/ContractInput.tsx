@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Chain } from '@/lib/types';
 
 interface ContractInputProps {
@@ -13,6 +13,19 @@ interface ContractInputProps {
 export default function ContractInput({ onScan, scanning, initialAddress = '', initialChain = 'EVM' }: ContractInputProps) {
   const [address, setAddress] = useState(initialAddress);
   const [chain, setChain] = useState<Chain>(initialChain);
+
+  // Synchronize state when initial props change (e.g. on demo mode triggers)
+  useEffect(() => {
+    if (initialAddress) {
+      setAddress(initialAddress);
+    }
+  }, [initialAddress]);
+
+  useEffect(() => {
+    if (initialChain) {
+      setChain(initialChain);
+    }
+  }, [initialChain]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

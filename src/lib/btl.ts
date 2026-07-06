@@ -42,21 +42,44 @@ export async function callBTL(
   messages: BTLMessage[],
   maxTokens?: number
 ): Promise<BTLResult> {
-  const response = await fetch(BTL_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.BTL_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
-    }),
-  });
+  let response: Response | null = null;
+  let lastError: Error | null = null;
+  const maxRetries = 3;
 
-  if (!response.ok) {
-    throw new Error(`BTL API error (${response.status}): ${await response.text()}`);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      response = await fetch(BTL_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.BTL_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
+        }),
+      });
+
+      if (response.ok) {
+        break; // Success!
+      }
+
+      const text = await response.text().catch(() => 'no error detail');
+      lastError = new Error(`BTL API error (${response.status}): ${text}`);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+
+    if (attempt < maxRetries) {
+      const delay = Math.pow(2, attempt) * 1000;
+      console.warn(`[btl] Call failed (attempt ${attempt}/${maxRetries}): ${lastError?.message}. Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  if (!response || !response.ok) {
+    throw lastError || new Error('BTL API call failed after retries');
   }
 
   const data = await response.json();

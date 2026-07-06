@@ -9,6 +9,9 @@ import { startMockFeed } from './mock-feed';
 
 export type { Transaction, Chain };
 
+const hasHelius = Boolean(process.env.HELIUS_API_KEY);
+const hasAlchemy = Boolean(process.env.ALCHEMY_API_KEY);
+
 export function subscribeToFeed(
   chain: Chain,
   address: string,
@@ -17,11 +20,24 @@ export function subscribeToFeed(
 ): () => void {
   const demoMode = options?.demo ?? process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
+  // Always use mock in demo mode
   if (demoMode) {
-    return startMockFeed(onTx);
+    return startMockFeed(onTx, address);
   }
 
-  return chain === 'SOL'
-    ? subscribeToSolanaTransactions(address, onTx)
-    : subscribeToEVMTransactions(address, onTx);
+  // If the relevant API key is absent, fall back to mock so the UI
+  // isn't stuck on "Waiting for transactions…" indefinitely.
+  if (chain === 'SOL') {
+    if (!hasHelius) {
+      console.warn('[feed] HELIUS_API_KEY not set — using mock feed');
+      return startMockFeed(onTx, address);
+    }
+    return subscribeToSolanaTransactions(address, onTx);
+  }
+
+  if (!hasAlchemy) {
+    console.warn('[feed] ALCHEMY_API_KEY not set — using mock feed');
+    return startMockFeed(onTx, address);
+  }
+  return subscribeToEVMTransactions(address, onTx);
 }

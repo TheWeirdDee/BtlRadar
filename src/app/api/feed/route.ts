@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   const encoder = new TextEncoder();
+  let active = true;
   let unsubscribe: () => void = () => {};
 
   const stream = new ReadableStream({
@@ -29,17 +30,24 @@ export async function GET(request: NextRequest) {
         chain,
         address,
         (tx) => {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(tx)}\n\n`));
+          if (!active) return;
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(tx)}\n\n`));
+          } catch {
+            active = false;
+          }
         },
         { demo }
       );
     },
     cancel() {
+      active = false;
       unsubscribe();
     },
   });
 
   request.signal.addEventListener('abort', () => {
+    active = false;
     unsubscribe();
   });
 

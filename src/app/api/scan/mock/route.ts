@@ -56,8 +56,8 @@ const TRAP_RESPONSE = {
 
 export async function POST(request: NextRequest) {
   const { transactions } = await request.json();
-  const tx = transactions?.[0];
-  const isPlanted = Boolean(tx?.hash) && tx.hash === PLANTED_HASH;
+  const batch = Array.isArray(transactions) ? transactions : (transactions ? [transactions] : []);
+  const isPlanted = batch.some((tx: { hash?: string }) => Boolean(tx?.hash) && tx.hash === PLANTED_HASH);
 
   if (!isPlanted) {
     return NextResponse.json(CLEAN_RESPONSE);

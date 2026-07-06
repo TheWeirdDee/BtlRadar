@@ -58,3 +58,27 @@ body {
     transform: translateY(0);
   }
 }
+
+@keyframes word-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-word {
+  opacity: 0;
+  animation: word-fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-word {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}

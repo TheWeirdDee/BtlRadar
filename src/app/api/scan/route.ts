@@ -7,14 +7,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callBTL, extractJSON } from '@/lib/btl';
 
-// All three tiers run on deepseek-direct routes, which are fully covered by
-// the hackathon's 5M DeepSeek starter-token grant (x-btl-customer-charge: 0).
-// OpenRouter-hosted models (deepseek-r1, gpt-4o-mini, claude-*) bill the
-// $0.50 workspace balance instead — with auto-refill on, avoid them here.
+// deepseek-v4-flash and deepseek-v4-pro are deepseek-direct routes covered
+// by the hackathon's 10M DeepSeek token grant (x-btl-customer-charge: 0).
+// gpt-4o-mini routes through OpenRouter and bills the workspace balance.
 const MODELS = {
-  screener: 'deepseek-v4-flash', // cheap + fast, runs on every batch
-  forensic: 'deepseek-v4-pro',   // mid-tier, fires only on a flag
-  judge: 'deepseek-v4-pro',      // deep-reasoning pass, fires only on escalation
+  screener: 'deepseek-v4-flash',  // free, fast, runs on every batch
+  forensic: 'gpt-4o-mini',        // mid-tier, fires only on a flag
+  judge: 'deepseek-v4-pro',       // deep-reasoning pass, fires on escalation only
 } as const;
 import { saveScan, getMemory, formatMemoryContext, type ScanRecord } from '@/lib/memory';
 
@@ -30,7 +29,7 @@ interface ScreenerVerdict {
   flagged: boolean;
   suspicious_hashes: string[];
   flags: string[];
-  confidence: number;
+  threat_score: number;
 }
 
 interface ForensicVerdict {
@@ -61,7 +60,7 @@ async function agent1Screen(transactions: Transaction[], contractAddress: string
     [
       {
         role: 'system',
-        content: `You are a high-speed blockchain transaction screener. Analyze transactions for red flags: large dev wallet movements, sudden liquidity drops, new wallet activity, unusual volume spikes, honeypot patterns. Respond ONLY with valid JSON in this exact format: {"flagged": true/false, "suspicious_hashes": ["0x..."], "flags": ["flag1", "flag2"], "confidence": 0-100}. Be fast and decisive.`
+        content: `You are a high-speed blockchain transaction screener. Analyze transactions for red flags: large dev wallet movements, sudden liquidity drops, new wallet activity, unusual volume spikes, honeypot patterns. Respond ONLY with valid JSON in this exact format: {"flagged": true/false, "suspicious_hashes": ["0x..."], "flags": ["flag1", "flag2"], "threat_score": 0-100}. Be fast and decisive.`
       },
       {
         role: 'user',
@@ -71,7 +70,7 @@ async function agent1Screen(transactions: Transaction[], contractAddress: string
     2000 // DeepSeek v4 reasoning tokens count toward max_tokens; too low truncates the JSON
   );
 
-  const fallback: ScreenerVerdict = { flagged: false, suspicious_hashes: [], flags: [], confidence: 0 };
+  const fallback: ScreenerVerdict = { flagged: false, suspicious_hashes: [], flags: [], threat_score: 0 };
   let parsed = fallback;
   try {
     parsed = { ...fallback, ...extractJSON<Partial<ScreenerVerdict>>(result.content) };
@@ -175,7 +174,7 @@ export async function POST(request: NextRequest) {
     const memoryContext = formatMemoryContext(memory);
 
     // Use mock transactions if none provided (demo mode)
-    const txData: Transaction[] = transactions || getMockTransactions(contractAddress);
+    const txData: Transaction[] = transactions || getMockTransactions();
 
     let totalActualCost = 0;
     let totalBenchmarkCost = 0;
@@ -189,7 +188,7 @@ export async function POST(request: NextRequest) {
       // SAFE — no escalation needed
       const scanResult = {
         verdict: 'SAFE' as const,
-        risk_score: 100 - screening.confidence,
+        risk_score: Math.max(0, Math.min(100, Math.round(screening.threat_score))),
         flags: [],
         summary: 'All transactions appear normal. No suspicious patterns detected.',
         action: 'No immediate action required.',
@@ -318,7 +317,7 @@ async function persistScan(
 }
 
 // Mock transactions for demo mode
-function getMockTransactions(address: string): Transaction[] {
+function getMockTransactions(): Transaction[] {
   return [
     { hash: '0x4a2f8c91d3e7b516f', amount: '0.42 ETH', wallet: '0xabc...123', timestamp: Date.now() - 60000 },
     { hash: '0x9b1e3d7742fc8a21e', amount: '1.2 ETH', wallet: '0xdef...456', timestamp: Date.now() - 45000 },

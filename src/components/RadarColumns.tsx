@@ -21,11 +21,12 @@ interface RadarColumnsProps {
   summary: string;
   action: string;
   keyEvidence: string[];
+  maxTxs?: number;
 }
 
 function Placeholder({ label }: { label: string }) {
   return (
-    <div className="flex h-full items-center justify-center border border-dashed border-border font-mono text-sm text-muted">
+    <div className="flex h-full min-h-0 flex-col items-center justify-center border border-dashed border-border font-mono text-sm text-muted">
       {label}
     </div>
   );
@@ -45,20 +46,22 @@ export default function RadarColumns({
   summary,
   action,
   keyEvidence,
+  maxTxs,
 }: RadarColumnsProps) {
   return (
-    <div className="grid w-full grid-cols-1 gap-4 lg:h-[520px] lg:grid-cols-3">
-      <div className="h-[400px] lg:h-full">
+    <div className="grid w-full grid-cols-1 gap-4 lg:h-[520px] lg:grid-cols-3 min-h-0">
+      <div className="h-[400px] lg:h-full min-h-0 flex flex-col">
         <TransactionFeed
           address={address}
           chain={chain}
           demo={demo}
           statusByHash={statusByHash}
           onTransaction={onTransaction}
+          maxTxs={maxTxs}
         />
       </div>
 
-      <div className="h-[400px] lg:h-full">
+      <div className="h-[400px] lg:h-full min-h-0 flex flex-col">
         {forensicActive ? (
           <ForensicAnalysis active={forensicActive} findings={forensicFindings} analyzing={forensicAnalyzing} />
         ) : (
@@ -66,7 +69,7 @@ export default function RadarColumns({
         )}
       </div>
 
-      <div className="h-[400px] lg:h-full">
+      <div className="h-[400px] lg:h-full min-h-0 flex flex-col">
         {verdict ? (
           <VerdictBox
             verdict={verdict}
