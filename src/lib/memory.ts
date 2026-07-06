@@ -108,7 +108,7 @@ export async function getMemory(contractAddress: string): Promise<ScanMemory> {
   if (db) {
     try {
       // v5: user(id).listMemory() returns memory items
-      const items = await (db as any).raw().user(contractAddress.toLowerCase()).listMemory();
+      const items = await db.user(contractAddress.toLowerCase()).listMemory();
       if (items && items.length > 0) {
         const scans: ScanRecord[] = [];
         for (const item of items) {

@@ -53,8 +53,8 @@ interface JudgeVerdict {
 // AGENT 1: High-speed screener
 // Job: flag or clear every transaction quickly
 async function agent1Screen(transactions: Transaction[], contractAddress: string) {
-  const txList = transactions.map(tx =>
-    `Hash: ${tx.hash} | Amount: ${tx.amount} | Wallet: ${tx.wallet} | Time: ${new Date(tx.timestamp).toISOString()}`
+  const txList = transactions.map((tx, idx) =>
+    `Tx #${idx + 1} | Hash: ${tx.hash} | Amount: ${tx.amount} | Wallet: ${tx.wallet}`
   ).join('\n');
 
   const result = await callBTL(

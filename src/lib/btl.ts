@@ -79,6 +79,12 @@ export async function callBTL(
   }
 
   if (!response || !response.ok) {
+    const isDeepSeek = model.startsWith('deepseek-v4-');
+    if (isDeepSeek) {
+      const fallback = 'gpt-4o-mini';
+      console.warn(`[btl] All attempts failed for model "${model}". Falling back to "${fallback}"...`);
+      return callBTL(fallback, messages, maxTokens);
+    }
     throw lastError || new Error('BTL API call failed after retries');
   }
 
