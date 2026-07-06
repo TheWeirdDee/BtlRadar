@@ -119,7 +119,7 @@ export default function LandingPage() {
         </ul>
 
         <div>
-          <Link href="/app" className="bg-white hover:bg-zinc-200 text-black px-5 py-2 font-mono text-xs font-bold tracking-wider transition-colors select-none">
+          <Link href="/app?demo=true" className="bg-white hover:bg-zinc-200 text-black px-5 py-2 font-mono text-xs font-bold tracking-wider transition-colors select-none">
             Launch Radar →
           </Link>
         </div>
@@ -139,6 +139,17 @@ export default function LandingPage() {
           >
             <span className="h-1.5 w-1.5 bg-mustard animate-ping" />
             Powered by BTL Runtime · Multi-Chain Security
+          </motion.div>
+
+          {/* Demo mode hint */}
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            className="mb-4 inline-flex items-center gap-2 border border-zinc-700 bg-white/[0.03] px-3 py-1 font-mono text-[0.6rem] text-zinc-400 tracking-widest select-none"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-green animate-pulse" />
+            LIVE DEMO AVAILABLE — click <span className="text-white font-bold mx-1">Launch Radar</span> to watch the full AI cascade run instantly
           </motion.div>
 
           <h1 className="mb-6 font-sans text-[clamp(2.5rem,6vw,4.8rem)] font-extrabold leading-[1.05] tracking-tight flex flex-wrap justify-center gap-x-[0.3em]">
@@ -223,7 +234,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center"
           >
-            <Link href="/app" className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black px-8 py-3.5 font-mono text-sm font-bold tracking-wider transition-colors text-center select-none">
+            <Link href="/app?demo=true" className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black px-8 py-3.5 font-mono text-sm font-bold tracking-wider transition-colors text-center select-none">
               Launch Radar Dashboard
             </Link>
             <a
@@ -533,7 +544,7 @@ saved = parseFloat(response.headers.get('x-btl-saved') || '0');`}
             Zero wallet connections needed. Scan any EVM or Solana token contract now and bypass bad liquidity pools.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
-            <Link href="/app" className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black px-8 py-3.5 font-mono text-xs font-bold tracking-widest transition-colors select-none">
+            <Link href="/app?demo=true" className="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black px-8 py-3.5 font-mono text-xs font-bold tracking-widest transition-colors select-none">
               LAUNCH RADAR NOW
             </Link>
             <a
